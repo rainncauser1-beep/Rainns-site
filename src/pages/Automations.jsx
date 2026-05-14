@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { AnimatePresence as AP } from "framer-motion";
 import CallDemoModal from "../components/CallDemoModal";
+import ContactSection from "../components/ContactSection";
 
 const EASE = [0.22, 1, 0.36, 1];
 const fadeUp = {
@@ -380,6 +381,7 @@ export default function Automations() {
         </div>
       </section>
 
+      <ContactSection />
       <CallDemoModal open={callOpen} onClose={() => setCallOpen(false)} />
     </>
   );

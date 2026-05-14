@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Link } from "react-router-dom";
 import { X, Mic, MicOff, PhoneOff, ArrowRight, Phone } from "lucide-react";
 import { logDemoTrial, incrementDemoTrial } from "../lib/supabase";
 
@@ -354,13 +355,13 @@ export default function CallDemoModal({ open, onClose }) {
                         Call again ({remaining} left)
                       </button>
                     )}
-                    <a
-                      href="#contact"
+                    <Link
+                      to="/#contact"
                       onClick={onClose}
                       className="w-full flex items-center justify-center gap-2 bg-slate-900 text-cream-100 py-3.5 rounded-full font-medium hover:bg-rain-700 transition"
                     >
                       Deploy this on my site <ArrowRight className="w-4 h-4" />
-                    </a>
+                    </Link>
                   </div>
                 </motion.div>
               )}
@@ -382,13 +383,13 @@ export default function CallDemoModal({ open, onClose }) {
                   <p className="text-slate-600 text-sm mb-6">
                     You've heard what Ava can do. Let's put her to work on your actual business.
                   </p>
-                  <a
-                    href="#contact"
+                  <Link
+                    to="/#contact"
                     onClick={onClose}
                     className="w-full flex items-center justify-center gap-2 bg-slate-900 text-cream-100 py-4 rounded-full font-medium hover:bg-rain-700 transition"
                   >
                     Book a setup call <ArrowRight className="w-4 h-4" />
-                  </a>
+                  </Link>
                 </motion.div>
               )}
             </AnimatePresence>

@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { ArrowRight, Sparkles, TrendingUp, Globe, ShieldCheck, Clock, Database, MapPin } from "lucide-react";
 import WaitlistModal from "../components/WaitlistModal";
 import CallDemoModal from "../components/CallDemoModal";
+import ContactSection from "../components/ContactSection";
 
 const EASE = [0.22, 1, 0.36, 1];
 
@@ -232,6 +233,7 @@ export default function Home() {
         </div>
       </section>
 
+      <ContactSection />
       <WaitlistModal
         open={waitlist.open}
         service={waitlist.service}
