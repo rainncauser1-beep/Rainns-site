@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Search, Phone, Mail, RefreshCw, Users } from "lucide-react";
-import { STATUSES, CHECKLIST_STEPS, listClients, checklistProgress } from "../lib/clients";
+import { STATUSES, CHECKLIST_STEPS, PAYMENT_STATUSES, listClients, checklistProgress } from "../lib/clients";
 import ClientDrawer from "./ClientDrawer";
 
 const EASE = [0.22, 1, 0.36, 1];
@@ -14,10 +14,17 @@ const TONE = {
   rose: { bg: "bg-rose-100", text: "text-rose-800", dot: "bg-rose-500" },
 };
 
+const PAYMENT_BADGE = {
+  active:   { label: "Paid", cls: "bg-emerald-100 text-emerald-700" },
+  past_due: { label: "Past Due", cls: "bg-amber-100 text-amber-700" },
+  canceled: { label: "Canceled", cls: "bg-rose-100 text-rose-700" },
+};
+
 function ClientCard({ client, onClick }) {
   const progress = checklistProgress(client);
   const status = STATUSES.find((s) => s.id === client.status) ?? STATUSES[0];
   const tone = TONE[status.tone];
+  const payBadge = PAYMENT_BADGE[client.payment_status];
 
   return (
     <motion.button
@@ -33,9 +40,16 @@ function ClientCard({ client, onClick }) {
         <div className="font-display text-lg text-slate-900 tracking-tight leading-tight truncate flex-1">
           {client.business_name}
         </div>
-        <div className={`inline-flex items-center gap-1 ${tone.bg} ${tone.text} px-2 py-0.5 rounded-full text-[10px] uppercase tracking-wider font-medium flex-shrink-0`}>
-          <span className={`w-1.5 h-1.5 rounded-full ${tone.dot}`} />
-          {status.label}
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {payBadge && (
+            <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] uppercase tracking-wider font-medium ${payBadge.cls}`}>
+              {payBadge.label}
+            </span>
+          )}
+          <div className={`inline-flex items-center gap-1 ${tone.bg} ${tone.text} px-2 py-0.5 rounded-full text-[10px] uppercase tracking-wider font-medium`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${tone.dot}`} />
+            {status.label}
+          </div>
         </div>
       </div>
 

@@ -1,5 +1,29 @@
 import { supabase } from "./supabase";
 
+export const PLANS = [
+  {
+    id: "starter",
+    label: "Starter",
+    setup: 500,
+    monthly: 197,
+    desc: "Voice receptionist only — inbound calls answered 24/7, SMS handoff, calendar booking.",
+  },
+  {
+    id: "fullcycle",
+    label: "Full-Cycle",
+    setup: 1000,
+    monthly: 497,
+    desc: "Voice + database reactivation + AI-targeted follow-up campaigns. Full stack.",
+  },
+];
+
+export const PAYMENT_STATUSES = {
+  unpaid:     { label: "Unpaid",     tone: "slate" },
+  active:     { label: "Active",     tone: "emerald" },
+  past_due:   { label: "Past Due",   tone: "amber" },
+  canceled:   { label: "Canceled",   tone: "rose" },
+};
+
 export const STATUSES = [
   { id: "lead", label: "Lead", tone: "slate" },
   { id: "booked", label: "Call Booked", tone: "rain" },
@@ -39,6 +63,10 @@ export function emptyClient() {
     status: "lead",
     notes: "",
     monthly_recurring: "",
+    plan: "starter",
+    payment_status: "unpaid",
+    stripe_customer_id: "",
+    stripe_subscription_id: "",
     ...Object.fromEntries(CHECKLIST_STEPS.map((s) => [s.key, false])),
   };
 }

@@ -2,9 +2,10 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X, Trash2, Check, Save, AlertCircle, Building2, Phone, Wrench,
-  Wifi, ListChecks, StickyNote, Loader2, Sparkles, Copy,
+  Wifi, ListChecks, StickyNote, Loader2, Sparkles, Copy, CreditCard,
+  ExternalLink, CheckCircle2,
 } from "lucide-react";
-import { STATUSES, CHECKLIST_STEPS, emptyClient, saveClient, deleteClient } from "../lib/clients";
+import { STATUSES, CHECKLIST_STEPS, PLANS, PAYMENT_STATUSES, emptyClient, saveClient, deleteClient } from "../lib/clients";
 import { supabase } from "../lib/supabase";
 
 const EASE = [0.22, 1, 0.36, 1];
@@ -50,6 +51,9 @@ export default function ClientDrawer({ open, client, onClose, onSaved }) {
   const [provisioning, setProvisioning] = useState(false);
   const [provisionMsg, setProvisionMsg] = useState("");
   const [copied, setCopied] = useState(false);
+  const [generatingLink, setGeneratingLink] = useState(false);
+  const [checkoutUrl, setCheckoutUrl] = useState("");
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const isEdit = Boolean(client?.id);
 
@@ -59,6 +63,7 @@ export default function ClientDrawer({ open, client, onClose, onSaved }) {
       setError("");
       setProvisionMsg("");
       setConfirmDelete(false);
+      setCheckoutUrl("");
     }
   }, [open, client]);
 
@@ -140,6 +145,48 @@ export default function ClientDrawer({ open, client, onClose, onSaved }) {
       await navigator.clipboard.writeText(form.retell_agent_id);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
+    } catch {}
+  };
+
+  const handleGenerateLink = async () => {
+    setGeneratingLink(true);
+    setCheckoutUrl("");
+    setError("");
+    try {
+      const sessionRes = await supabase?.auth.getSession();
+      const token = sessionRes?.data?.session?.access_token;
+      if (!token) throw new Error("You need to be signed in to generate a payment link.");
+
+      const res = await fetch("/.netlify/functions/create-checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          client_id: form.id || "pending",
+          client_email: form.owner_email || undefined,
+          client_name: form.business_name || undefined,
+          plan: form.plan || "starter",
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `Failed (HTTP ${res.status})`);
+      setCheckoutUrl(data.url);
+    } catch (e) {
+      setError(e.message ?? "Could not generate payment link.");
+    } finally {
+      setGeneratingLink(false);
+    }
+  };
+
+  const copyCheckoutUrl = async () => {
+    if (!checkoutUrl) return;
+    try {
+      await navigator.clipboard.writeText(checkoutUrl);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
     } catch {}
   };
 
@@ -323,6 +370,104 @@ export default function ClientDrawer({ open, client, onClose, onSaved }) {
                   <Field label="Zapier webhook URL" full hint="For SMS lead notifications">
                     <input className={inputCls + " font-mono text-[12px]"} value={form.zapier_webhook_url} onChange={update("zapier_webhook_url")} placeholder="https://hooks.zapier.com/..." />
                   </Field>
+                </div>
+              </Section>
+
+              {/* Payment */}
+              <Section icon={CreditCard} title="Payment">
+                {/* Plan selector */}
+                <div className="grid grid-cols-2 gap-2 mb-5">
+                  {PLANS.map((p) => {
+                    const selected = (form.plan || "starter") === p.id;
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => setForm((f) => ({ ...f, plan: p.id }))}
+                        className={`text-left p-4 rounded-xl border-2 transition ${
+                          selected
+                            ? "border-rain-500 bg-rain-50"
+                            : "border-slate-900/8 bg-cream-100 hover:border-slate-900/20"
+                        }`}
+                      >
+                        <div className={`font-display text-base tracking-tight mb-0.5 ${selected ? "text-rain-800" : "text-slate-900"}`}>
+                          {p.label}
+                        </div>
+                        <div className={`font-mono text-[11px] mb-2 ${selected ? "text-rain-600" : "text-slate-500"}`}>
+                          ${p.setup} setup · ${p.monthly}/mo
+                        </div>
+                        <div className="text-[11px] text-slate-500 leading-snug">{p.desc}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Payment status */}
+                {form.payment_status && form.payment_status !== "unpaid" && (
+                  <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[12px] font-medium mb-4 ${
+                    form.payment_status === "active"   ? "bg-emerald-100 text-emerald-800" :
+                    form.payment_status === "past_due" ? "bg-amber-100 text-amber-800" :
+                    form.payment_status === "canceled" ? "bg-rose-100 text-rose-800" :
+                                                         "bg-slate-100 text-slate-700"
+                  }`}>
+                    {form.payment_status === "active" && <CheckCircle2 className="w-3.5 h-3.5" />}
+                    {PAYMENT_STATUSES[form.payment_status]?.label ?? form.payment_status}
+                    {form.payment_status === "active" && form.stripe_subscription_id && (
+                      <span className="font-mono opacity-60 text-[10px]">
+                        · sub_{form.stripe_subscription_id.slice(-6)}
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* Generate link */}
+                <div className="p-4 bg-gradient-to-br from-slate-50 to-cream-50 border border-slate-200 rounded-xl">
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div>
+                      <div className="text-sm font-medium text-slate-900 mb-0.5">Send payment link</div>
+                      <p className="text-[12px] text-slate-500 leading-relaxed">
+                        Generates a Stripe Checkout link. Text or email it to the client — they pay, you get notified.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleGenerateLink}
+                      disabled={generatingLink || !form.id}
+                      className="flex-shrink-0 inline-flex items-center gap-1.5 bg-slate-900 text-cream-100 px-3 py-2 rounded-full text-[12px] font-medium hover:bg-rain-700 transition disabled:opacity-50"
+                      title={!form.id ? "Save the client first to generate a link" : ""}
+                    >
+                      {generatingLink ? (
+                        <><Loader2 className="w-3 h-3 animate-spin" />Generating…</>
+                      ) : (
+                        <><CreditCard className="w-3 h-3" />Generate</>
+                      )}
+                    </button>
+                  </div>
+                  {!form.id && (
+                    <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                      Save this client first, then generate the payment link.
+                    </div>
+                  )}
+                  {checkoutUrl && (
+                    <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 mt-1">
+                      <a
+                        href={checkoutUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 font-mono text-[11px] text-emerald-800 truncate hover:underline flex items-center gap-1"
+                      >
+                        <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                        {checkoutUrl.replace("https://checkout.stripe.com/c/pay/", "stripe.com/…")}
+                      </a>
+                      <button
+                        onClick={copyCheckoutUrl}
+                        className="flex-shrink-0 text-emerald-700 hover:text-emerald-900 transition"
+                        title="Copy link"
+                      >
+                        {linkCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+                  )}
                 </div>
               </Section>
 
