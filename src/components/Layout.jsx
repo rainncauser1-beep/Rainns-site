@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { NavLink, Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowUpRight, Menu, X, Mail, MapPin } from "lucide-react";
+import { ArrowUpRight, Menu, X, Mail, MapPin, LogIn, LayoutDashboard } from "lucide-react";
 import RaindropMark from "./RaindropMark";
+import { supabase } from "../lib/supabase";
 
 const EASE = [0.22, 1, 0.36, 1];
 
@@ -15,6 +16,7 @@ const navLinks = [
 function Nav() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [user, setUser] = useState(null);
   const location = useLocation();
 
   useEffect(() => {
@@ -25,6 +27,15 @@ function Nav() {
     const handler = () => setScrolled(window.scrollY > 12);
     window.addEventListener("scroll", handler, { passive: true });
     return () => window.removeEventListener("scroll", handler);
+  }, []);
+
+  useEffect(() => {
+    if (!supabase) return;
+    supabase.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null));
+    const { data: listener } = supabase.auth.onAuthStateChange((_e, session) =>
+      setUser(session?.user ?? null)
+    );
+    return () => listener.subscription.unsubscribe();
   }, []);
 
   return (
@@ -69,7 +80,24 @@ function Nav() {
             ))}
           </nav>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            {user ? (
+              <Link
+                to="/admin"
+                className="hidden md:inline-flex items-center gap-1.5 text-slate-700 hover:text-slate-900 px-3 py-2 rounded-full text-[13px] font-medium transition"
+              >
+                <LayoutDashboard className="w-3.5 h-3.5" />
+                Dashboard
+              </Link>
+            ) : (
+              <Link
+                to="/login"
+                className="hidden md:inline-flex items-center gap-1.5 text-slate-600 hover:text-slate-900 px-3 py-2 rounded-full text-[13px] font-medium transition"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                Sign in
+              </Link>
+            )}
             <Link
               to="/#contact"
               className="hidden md:inline-flex items-center gap-1.5 bg-rain-700 text-cream-100 px-4 py-2 rounded-full text-[13px] font-medium hover:bg-rain-600 transition"
@@ -119,13 +147,32 @@ function Nav() {
                 </NavLink>
               ))}
             </nav>
-            <Link
-              to="/#contact"
-              className="mt-auto mb-8 flex items-center justify-center gap-2 bg-slate-900 text-cream-100 py-4 rounded-full font-medium"
-            >
-              Book a Call
-              <ArrowUpRight className="w-4 h-4" />
-            </Link>
+            <div className="mt-auto mb-8 space-y-2">
+              {user ? (
+                <Link
+                  to="/admin"
+                  className="flex items-center justify-center gap-2 bg-cream-200 border border-slate-900/10 text-slate-800 py-3.5 rounded-full font-medium"
+                >
+                  <LayoutDashboard className="w-4 h-4" />
+                  Dashboard
+                </Link>
+              ) : (
+                <Link
+                  to="/login"
+                  className="flex items-center justify-center gap-2 bg-cream-200 border border-slate-900/10 text-slate-800 py-3.5 rounded-full font-medium"
+                >
+                  <LogIn className="w-4 h-4" />
+                  Sign in
+                </Link>
+              )}
+              <Link
+                to="/#contact"
+                className="flex items-center justify-center gap-2 bg-slate-900 text-cream-100 py-4 rounded-full font-medium"
+              >
+                Book a Call
+                <ArrowUpRight className="w-4 h-4" />
+              </Link>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

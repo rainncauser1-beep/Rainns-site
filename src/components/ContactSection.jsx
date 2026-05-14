@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowUpRight, Check } from "lucide-react";
+import { ArrowUpRight, Check, Calendar } from "lucide-react";
 import { saveContactSubmission } from "../lib/supabase";
+
+const CAL_LINK = "https://cal.com/rainn/15-min-meeting";
 
 const EASE = [0.22, 1, 0.36, 1];
 
@@ -124,6 +126,38 @@ export default function ContactSection() {
         <p className="mt-5 text-center font-mono text-[10px] uppercase tracking-[0.18em] text-slate-500">
           Report in &lt;24 hours · No credit card · 10DLC compliant
         </p>
+
+        {/* Cal.com alternative path */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1], delay: 0.15 }}
+          className="mt-10 bg-cream-100 border border-slate-900/8 rounded-2xl p-6 md:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-5"
+        >
+          <div className="flex items-start gap-4">
+            <div className="w-11 h-11 rounded-full bg-rain-100 flex items-center justify-center flex-shrink-0">
+              <Calendar className="w-5 h-5 text-rain-700" />
+            </div>
+            <div>
+              <div className="font-display text-xl text-slate-900 mb-1 tracking-tight">
+                Or skip the form &mdash; book a 15-min call.
+              </div>
+              <p className="text-slate-600 text-[14px] leading-relaxed">
+                See exactly how the system works, get your questions answered, and decide if it's a fit. No pressure.
+              </p>
+            </div>
+          </div>
+          <a
+            href={CAL_LINK}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-shrink-0 inline-flex items-center gap-2 bg-slate-900 text-cream-100 px-5 py-3 rounded-full text-sm font-medium hover:bg-rain-700 transition whitespace-nowrap"
+          >
+            <Calendar className="w-4 h-4" />
+            Book 15-min call
+          </a>
+        </motion.div>
       </div>
     </section>
   );
