@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+
+# Build output (Netlify rebuilds this on deploy)
+dist/
+
+# Local env
+.env
+.env.local
+.env.*.local
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/
+*.log
+npm-debug.log*
