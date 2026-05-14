@@ -11,6 +11,7 @@ const navLinks = [
   { to: "/automations", label: "AI Automations" },
   { to: "/marketing", label: "Marketing" },
   { to: "/architecture", label: "Digital Arch" },
+  { to: "/get-started", label: "Get Started" },
 ];
 
 function Nav() {

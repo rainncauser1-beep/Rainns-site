@@ -2,9 +2,10 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X, Trash2, Check, Save, AlertCircle, Building2, Phone, Wrench,
-  Wifi, ListChecks, StickyNote, Loader2,
+  Wifi, ListChecks, StickyNote, Loader2, Sparkles, Copy,
 } from "lucide-react";
 import { STATUSES, CHECKLIST_STEPS, emptyClient, saveClient, deleteClient } from "../lib/clients";
+import { supabase } from "../lib/supabase";
 
 const EASE = [0.22, 1, 0.36, 1];
 
@@ -46,6 +47,9 @@ export default function ClientDrawer({ open, client, onClose, onSaved }) {
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState("");
+  const [provisioning, setProvisioning] = useState(false);
+  const [provisionMsg, setProvisionMsg] = useState("");
+  const [copied, setCopied] = useState(false);
 
   const isEdit = Boolean(client?.id);
 
@@ -53,6 +57,7 @@ export default function ClientDrawer({ open, client, onClose, onSaved }) {
     if (open) {
       setForm(client ? { ...emptyClient(), ...client } : emptyClient());
       setError("");
+      setProvisionMsg("");
       setConfirmDelete(false);
     }
   }, [open, client]);
@@ -78,6 +83,64 @@ export default function ClientDrawer({ open, client, onClose, onSaved }) {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleProvision = async () => {
+    if (!form.business_name.trim()) {
+      setError("Add a business name before provisioning.");
+      return;
+    }
+    setProvisioning(true);
+    setProvisionMsg("");
+    setError("");
+    try {
+      // Get current Supabase session token to authorize the function call
+      const sessionRes = await supabase?.auth.getSession();
+      const token = sessionRes?.data?.session?.access_token;
+      if (!token) throw new Error("You need to be signed in to provision an agent.");
+
+      const res = await fetch("/.netlify/functions/provision-agent", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          business_name: form.business_name,
+          industry: form.industry,
+          business_hours: form.business_hours,
+          services: form.services,
+          top_objections: form.top_objections,
+          brand_voice_notes: form.brand_voice_notes,
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || data.detail || `Provisioning failed (HTTP ${res.status}).`);
+      }
+
+      // Persist returned agent_id and auto-tick "agent built" checklist step
+      setForm((f) => ({
+        ...f,
+        retell_agent_id: data.agent_id,
+        step_agent_built: true,
+      }));
+      setProvisionMsg(`Agent created: ${data.agent_id}`);
+    } catch (e) {
+      setError(e.message ?? "Could not provision agent.");
+    } finally {
+      setProvisioning(false);
+    }
+  };
+
+  const copyAgentId = async () => {
+    if (!form.retell_agent_id) return;
+    try {
+      await navigator.clipboard.writeText(form.retell_agent_id);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {}
   };
 
   const handleDelete = async () => {
@@ -203,6 +266,50 @@ export default function ClientDrawer({ open, client, onClose, onSaved }) {
 
               {/* Technical */}
               <Section icon={Wifi} title="Technical wiring">
+                {/* Auto-provision card */}
+                <div className="mb-5 p-4 bg-gradient-to-br from-rain-50 to-cream-50 border border-rain-200 rounded-xl">
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <Sparkles className="w-3.5 h-3.5 text-rain-700" />
+                        <span className="font-display text-sm text-slate-900 tracking-tight">
+                          Auto-provision Retell agent
+                        </span>
+                      </div>
+                      <p className="text-[12px] text-slate-600 leading-relaxed">
+                        Creates a fully-configured LLM + voice agent from this client's intake data. Pulls business name, hours, services, objections, and brand voice into the system prompt.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleProvision}
+                      disabled={provisioning}
+                      className="flex-shrink-0 inline-flex items-center gap-1.5 bg-slate-900 text-cream-100 px-3 py-2 rounded-full text-[12px] font-medium hover:bg-rain-700 transition disabled:opacity-50"
+                    >
+                      {provisioning ? (
+                        <>
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          Provisioning…
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-3 h-3" />
+                          {form.retell_agent_id ? "Re-provision" : "Provision"}
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  {provisionMsg && (
+                    <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-800 text-[12px] rounded-lg px-3 py-2">
+                      <Check className="w-3.5 h-3.5 flex-shrink-0" />
+                      <span className="font-mono truncate">{provisionMsg}</span>
+                      <button onClick={copyAgentId} className="ml-auto flex-shrink-0 hover:text-emerald-900 transition">
+                        {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+                  )}
+                </div>
+
                 <div className="grid sm:grid-cols-2 gap-3.5">
                   <Field label="Retell agent ID" full>
                     <input className={inputCls + " font-mono text-[12px]"} value={form.retell_agent_id} onChange={update("retell_agent_id")} placeholder="agent_xxxxxxxxxxxx" />

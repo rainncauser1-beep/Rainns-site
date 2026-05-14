@@ -111,7 +111,7 @@ export default function Home() {
               <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
             </button>
             <Link
-              to="/automations"
+              to="/get-started"
               className="inline-flex items-center gap-2 bg-cream-50 border border-slate-900/10 text-slate-800 px-6 py-4 rounded-full hover:border-slate-900/30 transition"
             >
               See how it works

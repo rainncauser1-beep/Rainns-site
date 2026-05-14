@@ -8,6 +8,7 @@ import Home from "./pages/Home";
 import Automations from "./pages/Automations";
 import Marketing from "./pages/Marketing";
 import Architecture from "./pages/Architecture";
+import GetStarted from "./pages/GetStarted";
 import Login from "./pages/Login";
 import Admin from "./pages/Admin";
 
@@ -46,6 +47,14 @@ function AnimatedRoutes() {
           element={
             <Layout>
               <Architecture />
+            </Layout>
+          }
+        />
+        <Route
+          path="/get-started"
+          element={
+            <Layout>
+              <GetStarted />
             </Layout>
           }
         />
