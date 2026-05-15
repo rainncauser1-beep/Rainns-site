@@ -70,7 +70,9 @@ exports.handler = async (event) => {
   try {
     const stripe = Stripe(stripeKey);
 
-    // Monthly subscription line item (ad-hoc)
+    // In Checkout subscription mode you can mix one-time and recurring line
+    // items. The one-time ones (no `recurring`) are charged on the first
+    // invoice automatically — that's how we collect the setup fee.
     const lineItems = [
       {
         price_data: {
@@ -82,30 +84,24 @@ exports.handler = async (event) => {
         quantity: 1,
       },
     ];
-
-    // Setup fee — added as a one-time invoice item on the first invoice only.
-    // If setup_amount is 0, we just skip it.
-    const subscriptionData = {
-      metadata: { client_id, client_name: businessLabel },
-    };
     if (setupDollars > 0) {
-      subscriptionData.add_invoice_items = [
-        {
-          price_data: {
-            currency: "usd",
-            product_data: { name: `Raindrop AI — Setup & Onboarding (${businessLabel})` },
-            unit_amount: Math.round(setupDollars * 100),
-          },
-          quantity: 1,
+      lineItems.push({
+        price_data: {
+          currency: "usd",
+          product_data: { name: `Raindrop AI — Setup & Onboarding (${businessLabel})` },
+          unit_amount: Math.round(setupDollars * 100),
         },
-      ];
+        quantity: 1,
+      });
     }
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       ...(client_email ? { customer_email: client_email } : {}),
       line_items: lineItems,
-      subscription_data: subscriptionData,
+      subscription_data: {
+        metadata: { client_id, client_name: businessLabel },
+      },
       metadata: {
         client_id,
         client_name: businessLabel,
