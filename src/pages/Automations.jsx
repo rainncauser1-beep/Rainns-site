@@ -2,11 +2,12 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import {
   Phone, MessageSquare, Calendar, Database, MapPin,
-  Check, ArrowRight, Send,
+  ArrowRight, Send,
 } from "lucide-react";
 import { AnimatePresence as AP } from "framer-motion";
 import CallDemoModal from "../components/CallDemoModal";
 import ContactSection from "../components/ContactSection";
+import RecoveredRevenue from "../components/RecoveredRevenue";
 
 const EASE = [0.22, 1, 0.36, 1];
 const fadeUp = {
@@ -36,15 +37,6 @@ const features = [
     title: "Database reactivation",
     body: "AI-personalized SMS sequences that wake up dead leads and book jobs — usually within 48 hours.",
   },
-];
-
-const included = [
-  "AI Voice Receptionist (1 Nashville number)",
-  "Web chat widget — fully branded",
-  "Calendar + CRM integration",
-  "SMS follow-up sequence",
-  "Monthly performance report",
-  "Priority support",
 ];
 
 // Mini demo chat
@@ -259,127 +251,7 @@ export default function Automations() {
         </div>
       </section>
 
-      {/* Pricing */}
-      <section id="pricing" className="px-6 py-24">
-        <div className="max-w-7xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, ease: EASE }}
-            className="mb-12"
-          >
-            <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-rain-600 mb-4">
-              Pricing
-            </div>
-            <h2 className="font-display text-4xl md:text-5xl text-slate-900 tracking-tight leading-tight text-balance">
-              Less than <span className="italic text-rain-700">one missed job</span> a month.
-            </h2>
-          </motion.div>
-
-          <motion.div
-            variants={stagger}
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true }}
-            className="grid md:grid-cols-2 gap-4"
-          >
-            {/* Starter */}
-            <motion.div
-              variants={fadeUp}
-              className="bg-cream-50 border border-slate-900/8 rounded-2xl p-10"
-            >
-              <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-2">
-                Starter
-              </div>
-              <h3 className="font-display text-3xl text-slate-900 mb-1 tracking-tight">
-                Lead Capture
-              </h3>
-              <p className="text-slate-600 text-sm mb-8">
-                For owner-operators ready to stop missing calls.
-              </p>
-              <div className="mb-1">
-                <span className="font-display text-5xl text-slate-900">$500</span>
-                <span className="font-mono text-xs text-slate-500 ml-2">setup</span>
-              </div>
-              <div className="mb-8 pb-8 border-b border-slate-900/8">
-                <span className="font-display text-2xl text-rain-700">+ $197</span>
-                <span className="font-mono text-xs text-slate-500 ml-2">/ month</span>
-              </div>
-              <ul className="space-y-3 mb-8">
-                {included.map((f, i) => (
-                  <li key={i} className="flex items-start gap-3 text-[15px] text-slate-700">
-                    <Check className="w-4 h-4 text-rain-600 mt-0.5 flex-shrink-0" />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              <a
-                href="#contact"
-                className="block w-full text-center border border-slate-900/15 hover:border-slate-900/40 text-slate-900 py-3.5 rounded-full font-medium transition"
-              >
-                Get started
-              </a>
-            </motion.div>
-
-            {/* Full system */}
-            <motion.div
-              variants={fadeUp}
-              className="bg-slate-900 text-cream-100 rounded-2xl p-10 relative overflow-hidden"
-            >
-              <div className="absolute top-6 right-6 bg-rain-500 text-cream-100 font-mono text-[10px] uppercase tracking-widest px-2.5 py-1 rounded-full">
-                Most Booked
-              </div>
-              <div className="absolute -bottom-20 -right-20 w-64 h-64 rounded-full bg-rain-700/30 blur-3xl" />
-
-              <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-rain-400 mb-2">
-                Full Automation
-              </div>
-              <h3 className="font-display text-3xl text-cream-100 mb-1 tracking-tight">
-                Full-Cycle AI Employee
-              </h3>
-              <p className="text-cream-200/60 text-sm mb-8">
-                Voice + Web + Database reactivation. The whole machine.
-              </p>
-              <div className="mb-1">
-                <span className="font-display text-5xl text-rain-400">$1,000</span>
-                <span className="font-mono text-xs text-cream-100/50 ml-2">setup</span>
-              </div>
-              <div className="mb-8 pb-8 border-b border-cream-100/10">
-                <span className="font-display text-2xl text-rain-400">+ $497</span>
-                <span className="font-mono text-xs text-cream-100/50 ml-2">/ month</span>
-              </div>
-              <ul className="space-y-3 mb-8">
-                {[
-                  "Everything in Lead Capture",
-                  "Database Reactivation engine",
-                  "Multi-channel SMS + Email sequences",
-                  "AEO Audit (ChatGPT, Perplexity, Gemini)",
-                  "Custom objection library",
-                  "A/B tested booking flows",
-                  "Priority support + dedicated PM",
-                  "Quarterly strategy call",
-                ].map((f, i) => (
-                  <li key={i} className="flex items-start gap-3 text-[15px] text-cream-100/80">
-                    <Check className="w-4 h-4 text-rain-400 mt-0.5 flex-shrink-0" />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              <a
-                href="#contact"
-                className="relative block w-full text-center bg-rain-500 hover:bg-rain-400 text-slate-900 py-3.5 rounded-full font-medium transition"
-              >
-                Deploy the full system →
-              </a>
-            </motion.div>
-          </motion.div>
-
-          <p className="mt-6 text-center font-mono text-[10px] uppercase tracking-[0.18em] text-slate-500">
-            No long-term contracts · 30-day performance guarantee · Pause anytime
-          </p>
-        </div>
-      </section>
+      <RecoveredRevenue />
 
       <ContactSection />
       <CallDemoModal open={callOpen} onClose={() => setCallOpen(false)} />

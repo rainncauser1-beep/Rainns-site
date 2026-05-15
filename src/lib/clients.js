@@ -1,22 +1,5 @@
 import { supabase } from "./supabase";
 
-export const PLANS = [
-  {
-    id: "starter",
-    label: "Starter",
-    setup: 500,
-    monthly: 197,
-    desc: "Voice receptionist only — inbound calls answered 24/7, SMS handoff, calendar booking.",
-  },
-  {
-    id: "fullcycle",
-    label: "Full-Cycle",
-    setup: 1000,
-    monthly: 497,
-    desc: "Voice + database reactivation + AI-targeted follow-up campaigns. Full stack.",
-  },
-];
-
 export const PAYMENT_STATUSES = {
   unpaid:     { label: "Unpaid",     tone: "slate" },
   active:     { label: "Active",     tone: "emerald" },
@@ -62,8 +45,8 @@ export function emptyClient() {
     zapier_webhook_url: "",
     status: "lead",
     notes: "",
+    setup_fee: "",
     monthly_recurring: "",
-    plan: "starter",
     payment_status: "unpaid",
     stripe_customer_id: "",
     stripe_subscription_id: "",
@@ -93,6 +76,10 @@ export async function saveClient(client) {
       client.monthly_recurring === "" || client.monthly_recurring == null
         ? null
         : Number(client.monthly_recurring),
+    setup_fee:
+      client.setup_fee === "" || client.setup_fee == null
+        ? null
+        : Number(client.setup_fee),
   };
   // Strip id if not present, and timestamps (managed by db)
   delete payload.created_at;

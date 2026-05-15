@@ -41,7 +41,7 @@ const steps = [
     icon: Rocket,
     title: "We deploy your agent",
     body: "Within 48 hours we provision your custom Retell agent, build your SMS-handoff Zap, give you the carrier code to forward your number, and run live test calls together.",
-    actionLabel: "See pricing",
+    actionLabel: "See what it could earn",
     duration: "Live in 48 hours",
     accent: "rain",
   },
@@ -61,7 +61,7 @@ const handles = {
     "Tell us your top 5 services + common objections",
     "Pick a brand voice direction (we can suggest)",
     "Show up to the 15-min discovery call",
-    "Pay $497/mo after we're confirmed live",
+    "Pay your custom quote once we're confirmed live",
   ],
 };
 
@@ -84,7 +84,7 @@ const faqs = [
   },
   {
     q: "What does it cost?",
-    a: "$1,000 setup + $497/month for the full-cycle system (voice + chat + database reactivation). The starter tier is $500 setup + $197/month for just the voice receptionist. Both plans include all platform usage costs (Retell, Twilio, etc.) — no hidden bills.",
+    a: "Pricing is custom — we quote every business individually based on call volume, services, and what we'd build. There's no tier you have to fit into. On the 15-min discovery call we walk through your numbers, agree on a setup fee and monthly amount, and send you a payment link. All platform usage costs (Retell, Twilio, etc.) are included — no hidden bills.",
   },
 ];
 
@@ -92,7 +92,7 @@ function StepCard({ s, i, onDemo }) {
   const Icon = s.icon;
   const onClick = i === 0 ? onDemo : null;
   const href = i === 1 ? CAL_LINK : null;
-  const internalLink = i === 2 ? "/automations#pricing" : null;
+  const internalLink = i === 2 ? "/automations#savings" : null;
 
   const buttonContent = (
     <>

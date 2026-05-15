@@ -1,7 +1,11 @@
-// Creates a Stripe Checkout session for a client payment.
+// Creates a Stripe Checkout session for a client with CUSTOM pricing.
+// Each client gets quoted individually — the admin types in the setup fee and
+// monthly amount, and Stripe creates ad-hoc prices on the fly. No pre-made
+// Stripe products needed.
+//
 // Auth: caller must send a Supabase access token in `Authorization: Bearer <jwt>`.
-// Body: { client_id, client_email, client_name, plan }
-// Returns: { url } — the Stripe-hosted checkout URL to send to the client.
+// Body: { client_id, client_email, client_name, setup_amount, monthly_amount }
+// Returns: { url } — the Stripe-hosted checkout URL to share with the client.
 
 const Stripe = require("stripe");
 
@@ -41,9 +45,18 @@ exports.handler = async (event) => {
     return { statusCode: 400, body: JSON.stringify({ error: "Invalid JSON body" }) };
   }
 
-  const { client_id, client_email, client_name, plan } = body;
-  if (!client_id || !plan) {
-    return { statusCode: 400, body: JSON.stringify({ error: "client_id and plan are required" }) };
+  const { client_id, client_email, client_name, setup_amount, monthly_amount } = body;
+  if (!client_id) {
+    return { statusCode: 400, body: JSON.stringify({ error: "client_id is required" }) };
+  }
+
+  const setupDollars = Number(setup_amount);
+  const monthlyDollars = Number(monthly_amount);
+  if (!Number.isFinite(monthlyDollars) || monthlyDollars <= 0) {
+    return { statusCode: 400, body: JSON.stringify({ error: "monthly_amount must be a positive number" }) };
+  }
+  if (!Number.isFinite(setupDollars) || setupDollars < 0) {
+    return { statusCode: 400, body: JSON.stringify({ error: "setup_amount must be a non-negative number" }) };
   }
 
   const stripeKey = process.env.STRIPE_SECRET_KEY;
@@ -51,38 +64,54 @@ exports.handler = async (event) => {
     return { statusCode: 500, body: JSON.stringify({ error: "STRIPE_SECRET_KEY not configured" }) };
   }
 
-  const PRICE_IDS = {
-    starter: {
-      setup: process.env.STRIPE_STARTER_SETUP_PRICE_ID,
-      monthly: process.env.STRIPE_STARTER_MONTHLY_PRICE_ID,
-    },
-    fullcycle: {
-      setup: process.env.STRIPE_FULLCYCLE_SETUP_PRICE_ID,
-      monthly: process.env.STRIPE_FULLCYCLE_MONTHLY_PRICE_ID,
-    },
-  };
-
-  const prices = PRICE_IDS[plan];
-  if (!prices || !prices.setup || !prices.monthly) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: `Stripe price IDs not configured for plan: ${plan}` }),
-    };
-  }
-
   const appUrl = process.env.URL || "https://rainndropai.netlify.app";
+  const businessLabel = client_name || "Raindrop AI Client";
 
   try {
     const stripe = Stripe(stripeKey);
+
+    // Monthly subscription line item (ad-hoc)
+    const lineItems = [
+      {
+        price_data: {
+          currency: "usd",
+          product_data: { name: `Raindrop AI — Monthly Service (${businessLabel})` },
+          unit_amount: Math.round(monthlyDollars * 100),
+          recurring: { interval: "month" },
+        },
+        quantity: 1,
+      },
+    ];
+
+    // Setup fee — added as a one-time invoice item on the first invoice only.
+    // If setup_amount is 0, we just skip it.
+    const subscriptionData = {
+      metadata: { client_id, client_name: businessLabel },
+    };
+    if (setupDollars > 0) {
+      subscriptionData.add_invoice_items = [
+        {
+          price_data: {
+            currency: "usd",
+            product_data: { name: `Raindrop AI — Setup & Onboarding (${businessLabel})` },
+            unit_amount: Math.round(setupDollars * 100),
+          },
+          quantity: 1,
+        },
+      ];
+    }
+
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       ...(client_email ? { customer_email: client_email } : {}),
-      line_items: [{ price: prices.monthly, quantity: 1 }],
-      subscription_data: {
-        add_invoice_items: [{ price: prices.setup, quantity: 1 }],
-        metadata: { client_id, plan, client_name: client_name || "" },
+      line_items: lineItems,
+      subscription_data: subscriptionData,
+      metadata: {
+        client_id,
+        client_name: businessLabel,
+        setup_amount: String(setupDollars),
+        monthly_amount: String(monthlyDollars),
       },
-      metadata: { client_id, plan, client_name: client_name || "" },
       success_url: `${appUrl}/?paid=1`,
       cancel_url: `${appUrl}/get-started`,
     });

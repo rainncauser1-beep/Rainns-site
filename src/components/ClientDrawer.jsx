@@ -5,7 +5,7 @@ import {
   Wifi, ListChecks, StickyNote, Loader2, Sparkles, Copy, CreditCard,
   ExternalLink, CheckCircle2,
 } from "lucide-react";
-import { STATUSES, CHECKLIST_STEPS, PLANS, PAYMENT_STATUSES, emptyClient, saveClient, deleteClient } from "../lib/clients";
+import { STATUSES, CHECKLIST_STEPS, PAYMENT_STATUSES, emptyClient, saveClient, deleteClient } from "../lib/clients";
 import { supabase } from "../lib/supabase";
 
 const EASE = [0.22, 1, 0.36, 1];
@@ -149,6 +149,17 @@ export default function ClientDrawer({ open, client, onClose, onSaved }) {
   };
 
   const handleGenerateLink = async () => {
+    const setupNum = Number(form.setup_fee);
+    const monthlyNum = Number(form.monthly_recurring);
+    if (!Number.isFinite(monthlyNum) || monthlyNum <= 0) {
+      setError("Enter a monthly amount before generating the link.");
+      return;
+    }
+    if (form.setup_fee !== "" && (!Number.isFinite(setupNum) || setupNum < 0)) {
+      setError("Setup fee must be a positive number (or blank for $0).");
+      return;
+    }
+
     setGeneratingLink(true);
     setCheckoutUrl("");
     setError("");
@@ -164,10 +175,11 @@ export default function ClientDrawer({ open, client, onClose, onSaved }) {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          client_id: form.id || "pending",
+          client_id: form.id,
           client_email: form.owner_email || undefined,
           client_name: form.business_name || undefined,
-          plan: form.plan || "starter",
+          setup_amount: form.setup_fee === "" ? 0 : setupNum,
+          monthly_amount: monthlyNum,
         }),
       });
 
@@ -361,11 +373,8 @@ export default function ClientDrawer({ open, client, onClose, onSaved }) {
                   <Field label="Retell agent ID" full>
                     <input className={inputCls + " font-mono text-[12px]"} value={form.retell_agent_id} onChange={update("retell_agent_id")} placeholder="agent_xxxxxxxxxxxx" />
                   </Field>
-                  <Field label="Retell phone number">
+                  <Field label="Retell phone number" full>
                     <input className={inputCls} value={form.retell_phone_number} onChange={update("retell_phone_number")} placeholder="+1 (615) 555-..." />
-                  </Field>
-                  <Field label="Monthly recurring ($)">
-                    <input type="number" step="0.01" className={inputCls} value={form.monthly_recurring} onChange={update("monthly_recurring")} placeholder="497" />
                   </Field>
                   <Field label="Zapier webhook URL" full hint="For SMS lead notifications">
                     <input className={inputCls + " font-mono text-[12px]"} value={form.zapier_webhook_url} onChange={update("zapier_webhook_url")} placeholder="https://hooks.zapier.com/..." />
@@ -375,32 +384,67 @@ export default function ClientDrawer({ open, client, onClose, onSaved }) {
 
               {/* Payment */}
               <Section icon={CreditCard} title="Payment">
-                {/* Plan selector */}
-                <div className="grid grid-cols-2 gap-2 mb-5">
-                  {PLANS.map((p) => {
-                    const selected = (form.plan || "starter") === p.id;
-                    return (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => setForm((f) => ({ ...f, plan: p.id }))}
-                        className={`text-left p-4 rounded-xl border-2 transition ${
-                          selected
-                            ? "border-rain-500 bg-rain-50"
-                            : "border-slate-900/8 bg-cream-100 hover:border-slate-900/20"
-                        }`}
-                      >
-                        <div className={`font-display text-base tracking-tight mb-0.5 ${selected ? "text-rain-800" : "text-slate-900"}`}>
-                          {p.label}
-                        </div>
-                        <div className={`font-mono text-[11px] mb-2 ${selected ? "text-rain-600" : "text-slate-500"}`}>
-                          ${p.setup} setup · ${p.monthly}/mo
-                        </div>
-                        <div className="text-[11px] text-slate-500 leading-snug">{p.desc}</div>
-                      </button>
-                    );
-                  })}
+                {/* Custom price inputs */}
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <Field label="Setup fee ($)" hint="One-time, charged on first invoice">
+                    <div className="relative">
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-mono text-sm">$</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="50"
+                        className={inputCls + " pl-7"}
+                        value={form.setup_fee}
+                        onChange={update("setup_fee")}
+                        placeholder="500"
+                      />
+                    </div>
+                  </Field>
+                  <Field label="Monthly ($)" hint="Recurring subscription">
+                    <div className="relative">
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-mono text-sm">$</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="10"
+                        className={inputCls + " pl-7"}
+                        value={form.monthly_recurring}
+                        onChange={update("monthly_recurring")}
+                        placeholder="197"
+                      />
+                    </div>
+                  </Field>
                 </div>
+
+                {/* First invoice preview */}
+                {(Number(form.setup_fee) > 0 || Number(form.monthly_recurring) > 0) && (
+                  <div className="mb-4 p-3 bg-cream-100 border border-slate-900/8 rounded-xl">
+                    <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-slate-500 mb-2">
+                      First invoice
+                    </div>
+                    <div className="flex justify-between text-[13px] text-slate-700 mb-1">
+                      <span>Setup fee</span>
+                      <span className="font-mono tabular-nums">
+                        ${Number(form.setup_fee || 0).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-[13px] text-slate-700 mb-2 pb-2 border-b border-slate-900/8">
+                      <span>First month</span>
+                      <span className="font-mono tabular-nums">
+                        ${Number(form.monthly_recurring || 0).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-[14px] font-medium text-slate-900">
+                      <span>Due today</span>
+                      <span className="font-mono tabular-nums">
+                        ${(Number(form.setup_fee || 0) + Number(form.monthly_recurring || 0)).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="mt-1.5 text-[11px] text-slate-500">
+                      Then ${Number(form.monthly_recurring || 0).toLocaleString()}/mo recurring
+                    </div>
+                  </div>
+                )}
 
                 {/* Payment status */}
                 {form.payment_status && form.payment_status !== "unpaid" && (
@@ -426,7 +470,7 @@ export default function ClientDrawer({ open, client, onClose, onSaved }) {
                     <div>
                       <div className="text-sm font-medium text-slate-900 mb-0.5">Send payment link</div>
                       <p className="text-[12px] text-slate-500 leading-relaxed">
-                        Generates a Stripe Checkout link. Text or email it to the client — they pay, you get notified.
+                        Generates a Stripe Checkout link with the amounts above. Text or email it to the client.
                       </p>
                     </div>
                     <button

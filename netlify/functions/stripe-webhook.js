@@ -64,14 +64,21 @@ exports.handler = async (event) => {
   switch (stripeEvent.type) {
     case "checkout.session.completed": {
       const session = stripeEvent.data.object;
-      const { client_id, plan } = session.metadata || {};
+      const { client_id, setup_amount, monthly_amount } = session.metadata || {};
       if (client_id) {
-        await updateByClientId(client_id, {
+        const updates = {
           payment_status: "active",
-          plan: plan || "starter",
           stripe_customer_id: session.customer || null,
           stripe_subscription_id: session.subscription || null,
-        });
+        };
+        // Persist the quoted amounts in case admin didn't save them before sending the link
+        if (setup_amount && Number.isFinite(Number(setup_amount))) {
+          updates.setup_fee = Number(setup_amount);
+        }
+        if (monthly_amount && Number.isFinite(Number(monthly_amount))) {
+          updates.monthly_recurring = Number(monthly_amount);
+        }
+        await updateByClientId(client_id, updates);
       }
       break;
     }
