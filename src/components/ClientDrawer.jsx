@@ -125,13 +125,20 @@ export default function ClientDrawer({ open, client, onClose, onSaved }) {
         throw new Error(data.error || data.detail || `Provisioning failed (HTTP ${res.status}).`);
       }
 
-      // Persist returned agent_id and auto-tick "agent built" checklist step
+      // Persist returned IDs and auto-tick "agent built" checklist step
       setForm((f) => ({
         ...f,
         retell_agent_id: data.agent_id,
+        retell_phone_number: data.phone_number || f.retell_phone_number,
         step_agent_built: true,
       }));
-      setProvisionMsg(`Agent created: ${data.agent_id}`);
+      if (data.phone_number) {
+        setProvisionMsg(`Agent ${data.agent_id} · Number ${data.phone_number}`);
+      } else if (data.phone_error) {
+        setProvisionMsg(`Agent created · Phone failed: ${data.phone_error.slice(0, 80)}`);
+      } else {
+        setProvisionMsg(`Agent created: ${data.agent_id}`);
+      }
     } catch (e) {
       setError(e.message ?? "Could not provision agent.");
     } finally {

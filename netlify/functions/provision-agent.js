@@ -147,12 +147,54 @@ exports.handler = async (event) => {
     };
   }
 
+  // --- Step 3: provision a phone number (best-effort) ---
+  // We try to buy a number in the client's local area code (pulled from their
+  // business phone). If that fails for any reason — no payment method on
+  // Retell, area code unavailable, etc. — we still return the agent_id and
+  // surface a phone_error so the admin UI can warn but not block.
+  let phone_number = null;
+  let phone_error = null;
+  try {
+    const areaCode = extractAreaCode(body.business_phone) ?? 615;
+    const phoneRes = await fetch("https://api.retellai.com/create-phone-number", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        inbound_agent_id: agent.agent_id,
+        area_code: areaCode,
+        nickname: body.business_name,
+      }),
+    });
+    if (phoneRes.ok) {
+      const phoneData = await phoneRes.json();
+      phone_number = phoneData.phone_number || phoneData.phone_number_pretty || null;
+    } else {
+      phone_error = await phoneRes.text();
+    }
+  } catch (e) {
+    phone_error = e.message;
+  }
+
   return {
     statusCode: 200,
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       agent_id: agent.agent_id,
       llm_id: llm.llm_id,
+      phone_number,
+      phone_error,
     }),
   };
 };
+
+function extractAreaCode(phoneStr) {
+  if (!phoneStr) return null;
+  const digits = String(phoneStr).replace(/\D/g, "");
+  if (digits.length >= 10) {
+    return Number(digits.slice(-10, -7));
+  }
+  return null;
+}

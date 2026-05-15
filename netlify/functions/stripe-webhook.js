@@ -1,9 +1,15 @@
 // Handles Stripe webhook events and updates client payment status in Supabase.
 // Stripe sends events here after each payment action.
-// Netlify env vars required: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, SUPABASE_SERVICE_ROLE_KEY
+//
+// Required Netlify env vars: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET,
+//   SUPABASE_SERVICE_ROLE_KEY
+// Optional (for email notifications): RESEND_API_KEY, MAIL_FROM, OWNER_EMAIL
 
 const Stripe = require("stripe");
 const { createClient } = require("@supabase/supabase-js");
+
+const DEFAULT_OWNER_EMAIL = "rainn.causer1@gmail.com";
+const DEFAULT_FROM = "Raindrop AI <onboarding@resend.dev>";
 
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {
@@ -79,6 +85,24 @@ exports.handler = async (event) => {
           updates.monthly_recurring = Number(monthly_amount);
         }
         await updateByClientId(client_id, updates);
+
+        // After the update, fetch the full client record and fire welcome +
+        // owner notification emails. Failures here don't break the webhook.
+        try {
+          const { data: client } = await supabase
+            .from("clients")
+            .select("*")
+            .eq("id", client_id)
+            .maybeSingle();
+          if (client) {
+            await Promise.all([
+              sendWelcomeEmail(client),
+              sendOwnerNotification(client, setup_amount, monthly_amount),
+            ]);
+          }
+        } catch (e) {
+          console.error("Post-payment email error:", e.message);
+        }
       }
       break;
     }
@@ -116,3 +140,134 @@ exports.handler = async (event) => {
     body: JSON.stringify({ received: true }),
   };
 };
+
+// ---------------------------------------------------------------------------
+// Email helpers (Resend). All no-op cleanly if RESEND_API_KEY is unset.
+// ---------------------------------------------------------------------------
+
+async function sendEmail({ to, subject, html }) {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) {
+    console.log("RESEND_API_KEY not set — skipping email to", to);
+    return;
+  }
+  if (!to) return;
+
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${key}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: process.env.MAIL_FROM || DEFAULT_FROM,
+        to: [to],
+        subject,
+        html,
+      }),
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error("Resend send error:", res.status, errText);
+    }
+  } catch (e) {
+    console.error("Resend network error:", e.message);
+  }
+}
+
+function sendWelcomeEmail(client) {
+  if (!client.owner_email) return Promise.resolve();
+
+  const name = client.owner_name?.split(" ")[0] || "there";
+  const businessName = client.business_name || "your business";
+  const phone = client.retell_phone_number;
+
+  const phoneBlock = phone
+    ? `
+        <p style="margin: 24px 0; padding: 20px; background: #f8f7f3; border-left: 3px solid #15325a; border-radius: 4px;">
+          <strong style="font-size: 13px; color: #6b7280; letter-spacing: 0.06em; text-transform: uppercase;">Your AI phone number</strong><br>
+          <span style="font-size: 26px; font-weight: 600; color: #15325a; font-family: -apple-system, system-ui, sans-serif;">${phone}</span>
+        </p>
+        <p>Forward your missed calls to this number using your carrier code:</p>
+        <ul style="line-height: 1.7;">
+          <li><strong>AT&amp;T:</strong> dial <code>**61*${phone}#</code></li>
+          <li><strong>Verizon:</strong> dial <code>*71</code> then ${phone}</li>
+          <li><strong>T-Mobile:</strong> dial <code>**61*${phone}#</code></li>
+          <li><strong>Other carriers:</strong> dial <code>*71</code> then your AI number</li>
+        </ul>
+        <p>This forwards <strong>only the calls you don't answer in 2 rings</strong> — your phone still rings first. The AI is just a safety net.</p>
+      `
+    : `<p>We're finalizing your dedicated AI phone number. You'll get a follow-up email within 24 hours with the number and forwarding instructions.</p>`;
+
+  const html = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; max-width: 560px; margin: 0 auto; color: #0b1220; line-height: 1.55;">
+      <p>Hi ${escapeHtml(name)},</p>
+      <p>Welcome to Raindrop AI — and thanks for trusting us with ${escapeHtml(businessName)}.</p>
+      <p>Your custom AI receptionist is built and ready to start catching calls 24/7.</p>
+      ${phoneBlock}
+      <p><strong>What happens next:</strong></p>
+      <ol style="line-height: 1.7;">
+        <li>I'll personally reach out within 24 hours to run a live test call with you.</li>
+        <li>We'll fine-tune the agent based on how it sounds in real-world use.</li>
+        <li>Once you're happy, dial the forwarding code above and you're live.</li>
+      </ol>
+      <p>Any questions before then, just reply to this email.</p>
+      <p>— Rainn<br>
+      <span style="color: #6b7280; font-size: 13px;">Raindrop AI · Nashville</span></p>
+    </div>
+  `;
+
+  return sendEmail({
+    to: client.owner_email,
+    subject: `Welcome to Raindrop AI — your AI is ready`,
+    html,
+  });
+}
+
+function sendOwnerNotification(client, setup_amount, monthly_amount) {
+  const owner = process.env.OWNER_EMAIL || DEFAULT_OWNER_EMAIL;
+  const setup = Number(setup_amount) || client.setup_fee || 0;
+  const monthly = Number(monthly_amount) || client.monthly_recurring || 0;
+  const total = setup + monthly;
+
+  const html = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; max-width: 560px; margin: 0 auto; color: #0b1220; line-height: 1.55;">
+      <h2 style="margin: 0 0 16px;">💧 New client paid</h2>
+      <p style="font-size: 18px;"><strong>${escapeHtml(client.business_name || "(no name)")}</strong></p>
+      <table style="border-collapse: collapse; width: 100%; margin: 16px 0;">
+        <tr><td style="padding: 6px 0; color: #6b7280;">Owner:</td><td><strong>${escapeHtml(client.owner_name || "—")}</strong></td></tr>
+        <tr><td style="padding: 6px 0; color: #6b7280;">Email:</td><td>${escapeHtml(client.owner_email || "—")}</td></tr>
+        <tr><td style="padding: 6px 0; color: #6b7280;">Mobile:</td><td>${escapeHtml(client.owner_phone || "—")}</td></tr>
+        <tr><td style="padding: 6px 0; color: #6b7280;">Industry:</td><td>${escapeHtml(client.industry || "—")}</td></tr>
+        <tr><td style="padding: 6px 0; color: #6b7280;">Setup paid:</td><td>$${setup.toLocaleString()}</td></tr>
+        <tr><td style="padding: 6px 0; color: #6b7280;">Monthly:</td><td>$${monthly.toLocaleString()}/mo</td></tr>
+        <tr><td style="padding: 6px 0; color: #6b7280;">First charge:</td><td><strong>$${total.toLocaleString()}</strong></td></tr>
+        <tr><td style="padding: 6px 0; color: #6b7280;">Agent:</td><td><code>${escapeHtml(client.retell_agent_id || "not provisioned")}</code></td></tr>
+        <tr><td style="padding: 6px 0; color: #6b7280;">AI number:</td><td>${escapeHtml(client.retell_phone_number || "not provisioned")}</td></tr>
+      </table>
+      <p><strong>Your move:</strong></p>
+      <ul style="line-height: 1.7;">
+        <li>Schedule the live test call</li>
+        <li>Confirm forwarding works on their end</li>
+        <li>Confirm SMS handoff works on their phone</li>
+      </ul>
+      <p><a href="https://rainndropai.netlify.app/admin" style="color: #15325a; font-weight: 600;">Open in admin →</a></p>
+    </div>
+  `;
+
+  return sendEmail({
+    to: owner,
+    subject: `💧 New client paid: ${client.business_name || client.id}`,
+    html,
+  });
+}
+
+function escapeHtml(str) {
+  return String(str ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
