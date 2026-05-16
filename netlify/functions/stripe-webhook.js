@@ -212,6 +212,11 @@ function sendWelcomeEmail(client) {
         <li>We'll fine-tune the agent based on how it sounds in real-world use.</li>
         <li>Once you're happy, dial the forwarding code above and you're live.</li>
       </ol>
+      <div style="margin: 28px 0; padding: 18px 20px; background: #15325a; border-radius: 10px; text-align: center;">
+        <p style="margin: 0 0 4px; color: #cfe0f5; font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em;">Your portal</p>
+        <p style="margin: 0 0 10px; color: #fff; font-size: 14px;">View calls, transcripts, and toggle the AI on/off</p>
+        <a href="https://rainndropai.netlify.app/portal/login" style="display: inline-block; background: #fff; color: #15325a; padding: 10px 22px; border-radius: 9999px; font-weight: 600; font-size: 14px; text-decoration: none;">Sign in to portal →</a>
+      </div>
       <p>Any questions before then, just reply to this email.</p>
       <p>— Rainn<br>
       <span style="color: #6b7280; font-size: 13px;">Raindrop AI · Nashville</span></p>

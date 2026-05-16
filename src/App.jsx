@@ -11,6 +11,8 @@ import Architecture from "./pages/Architecture";
 import GetStarted from "./pages/GetStarted";
 import Login from "./pages/Login";
 import Admin from "./pages/Admin";
+import Portal from "./pages/Portal";
+import PortalLogin from "./pages/PortalLogin";
 
 function AnimatedRoutes() {
   const location = useLocation();
@@ -61,6 +63,10 @@ function AnimatedRoutes() {
 
         {/* Auth — no shared Layout (full-screen login) */}
         <Route path="/login" element={<Login />} />
+
+        {/* Client portal — magic-link login + protected dashboard */}
+        <Route path="/portal/login" element={<PortalLogin />} />
+        <Route path="/portal" element={<Portal />} />
 
         {/* Admin — protected, no shared Layout */}
         <Route
