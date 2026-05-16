@@ -115,6 +115,11 @@ exports.handler = async (event) => {
   }
 
   // --- Step 2: create the Agent (voice + behavior wrapper) ---
+  // Point its post-call webhook at our lead-handoff function so every call
+  // automatically emails the lead to the client + logs to Supabase.
+  const siteUrl = process.env.URL || "https://rainndropai.netlify.app";
+  const webhookUrl = `${siteUrl}/.netlify/functions/lead-handoff`;
+
   let agent;
   try {
     const agentRes = await fetch("https://api.retellai.com/create-agent", {
@@ -130,6 +135,7 @@ exports.handler = async (event) => {
         language: "en-US",
         responsiveness: 1,
         interruption_sensitivity: 1,
+        webhook_url: webhookUrl,
       }),
     });
     if (!agentRes.ok) {
