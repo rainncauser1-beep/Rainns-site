@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Phone, Power, LogOut, MapPin, Clock, TrendingUp, Calendar,
   PhoneCall, MessageSquare, ChevronDown, ChevronUp, AlertCircle, Loader2,
+  BarChart3, Wifi, Settings, Save, Check, ArrowUp, ArrowDown, Minus,
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import RaindropMark from "../components/RaindropMark";
@@ -147,6 +148,7 @@ export default function Portal() {
   const [carrier, setCarrier] = useState("AT&T");
   const [showForwardCodes, setShowForwardCodes] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
+  const [liveBadge, setLiveBadge] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -189,15 +191,103 @@ export default function Portal() {
     return () => { cancelled = true; };
   }, [navigate]);
 
+  // Realtime subscription: new calls appear without refresh
+  useEffect(() => {
+    if (!supabase || !client?.id) return;
+    const channel = supabase
+      .channel(`call-logs-${client.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "call_logs",
+          filter: `client_id=eq.${client.id}`,
+        },
+        (payload) => {
+          setCalls((prev) => {
+            // Dedupe by id in case the initial load and the realtime event race
+            if (prev.some((c) => c.id === payload.new.id)) return prev;
+            return [payload.new, ...prev];
+          });
+          setLiveBadge(true);
+          setTimeout(() => setLiveBadge(false), 4000);
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "call_logs",
+          filter: `client_id=eq.${client.id}`,
+        },
+        (payload) => {
+          setCalls((prev) =>
+            prev.map((c) => (c.id === payload.new.id ? { ...c, ...payload.new } : c))
+          );
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [client?.id]);
+
   const stats = useMemo(() => {
     const now = Date.now();
     const week = 7 * 24 * 60 * 60 * 1000;
     const month = 30 * 24 * 60 * 60 * 1000;
     const thisWeek = calls.filter(c => c.started_at && (now - new Date(c.started_at).getTime()) < week).length;
+    const lastWeek = calls.filter(c => {
+      if (!c.started_at) return false;
+      const age = now - new Date(c.started_at).getTime();
+      return age >= week && age < 2 * week;
+    }).length;
     const thisMonth = calls.filter(c => c.started_at && (now - new Date(c.started_at).getTime()) < month).length;
     const lastCall = calls[0]?.started_at || calls[0]?.created_at;
-    return { thisWeek, thisMonth, total: calls.length, lastCall };
+    return { thisWeek, lastWeek, thisMonth, total: calls.length, lastCall };
   }, [calls]);
+
+  // 14-day daily call counts for the performance chart
+  const chartData = useMemo(() => {
+    const days = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    for (let i = 13; i >= 0; i--) {
+      const day = new Date(today);
+      day.setDate(today.getDate() - i);
+      const next = new Date(day);
+      next.setDate(day.getDate() + 1);
+      const count = calls.filter((c) => {
+        if (!c.started_at) return false;
+        const d = new Date(c.started_at);
+        return d >= day && d < next;
+      }).length;
+      days.push({
+        date: day,
+        count,
+        label: day.toLocaleDateString("en-US", { weekday: "short" }),
+        full: day.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+        isToday: i === 0,
+      });
+    }
+    return days;
+  }, [calls]);
+
+  const chartMax = useMemo(() => Math.max(1, ...chartData.map((d) => d.count)), [chartData]);
+
+  // Trend delta this week vs last week
+  const weekDelta = useMemo(() => {
+    const { thisWeek, lastWeek } = stats;
+    if (lastWeek === 0 && thisWeek === 0) return { pct: 0, dir: "flat" };
+    if (lastWeek === 0) return { pct: 100, dir: "up" };
+    const change = ((thisWeek - lastWeek) / lastWeek) * 100;
+    return {
+      pct: Math.round(Math.abs(change)),
+      dir: change > 0 ? "up" : change < 0 ? "down" : "flat",
+    };
+  }, [stats]);
 
   const signOut = async () => {
     if (supabase) await supabase.auth.signOut();
@@ -403,6 +493,93 @@ export default function Portal() {
           <StatTile icon={Clock} label="Last call" value={stats.lastCall ? fmtDate(stats.lastCall) : "—"} />
         </motion.div>
 
+        {/* Performance chart */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: EASE, delay: 0.12 }}
+          className="mb-8"
+        >
+          <div className="bg-cream-50 border border-slate-900/8 rounded-2xl p-6 md:p-8">
+            <div className="flex items-start justify-between mb-6 flex-wrap gap-3">
+              <div>
+                <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-rain-600 mb-1 flex items-center gap-2">
+                  <BarChart3 className="w-3 h-3" />
+                  Performance
+                </div>
+                <h2 className="font-display text-2xl text-slate-900 tracking-tight">
+                  Last 14 days
+                </h2>
+              </div>
+              {weekDelta.dir !== "flat" || stats.thisWeek > 0 ? (
+                <div className="flex items-center gap-2">
+                  <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium ${
+                    weekDelta.dir === "up"
+                      ? "bg-emerald-100 text-emerald-800"
+                      : weekDelta.dir === "down"
+                      ? "bg-rose-100 text-rose-800"
+                      : "bg-slate-100 text-slate-700"
+                  }`}>
+                    {weekDelta.dir === "up" && <ArrowUp className="w-3 h-3" />}
+                    {weekDelta.dir === "down" && <ArrowDown className="w-3 h-3" />}
+                    {weekDelta.dir === "flat" && <Minus className="w-3 h-3" />}
+                    {weekDelta.pct}% vs last week
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            {/* Bars */}
+            <div className="flex items-end gap-1.5 md:gap-2 h-32 mb-3">
+              {chartData.map((d, i) => (
+                <div
+                  key={i}
+                  className="flex-1 flex flex-col items-center justify-end group relative"
+                >
+                  {d.count > 0 && (
+                    <div className="absolute -top-7 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900 text-cream-100 text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap z-10">
+                      {d.count} call{d.count !== 1 ? "s" : ""} · {d.full}
+                    </div>
+                  )}
+                  <motion.div
+                    initial={{ height: 0 }}
+                    animate={{ height: `${(d.count / chartMax) * 100}%` }}
+                    transition={{ duration: 0.7, ease: EASE, delay: 0.15 + i * 0.025 }}
+                    className={`w-full rounded-t-md ${
+                      d.isToday
+                        ? "bg-gradient-to-t from-rain-700 to-rain-500"
+                        : d.count > 0
+                        ? "bg-slate-400 group-hover:bg-slate-600 transition-colors"
+                        : "bg-cream-200"
+                    }`}
+                    style={{ minHeight: d.count > 0 ? 4 : 2 }}
+                  />
+                </div>
+              ))}
+            </div>
+
+            {/* Day labels */}
+            <div className="flex gap-1.5 md:gap-2">
+              {chartData.map((d, i) => (
+                <div
+                  key={i}
+                  className={`flex-1 text-center font-mono text-[10px] ${
+                    d.isToday ? "text-rain-700 font-semibold" : "text-slate-400"
+                  }`}
+                >
+                  {d.label[0]}
+                </div>
+              ))}
+            </div>
+
+            {stats.total === 0 && (
+              <p className="mt-5 text-center font-mono text-[10px] uppercase tracking-wider text-slate-400">
+                Once your AI starts taking calls, you'll see the rhythm here
+              </p>
+            )}
+          </div>
+        </motion.div>
+
         {/* Calls list */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -411,12 +588,29 @@ export default function Portal() {
         >
           <div className="flex items-center justify-between mb-4">
             <div>
-              <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-rain-600 mb-1">
+              <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-rain-600 mb-1 flex items-center gap-2">
                 Recent calls
+                <AnimatePresence>
+                  {liveBadge && (
+                    <motion.span
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      className="inline-flex items-center gap-1 normal-case tracking-normal bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded-full text-[9px] font-semibold"
+                    >
+                      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                      New call
+                    </motion.span>
+                  )}
+                </AnimatePresence>
               </div>
               <h2 className="font-display text-2xl text-slate-900 tracking-tight">
                 Every lead your AI captured
               </h2>
+            </div>
+            <div className="font-mono text-[10px] uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 bg-rain-500 rounded-full animate-pulse" />
+              Live
             </div>
           </div>
 
@@ -440,6 +634,9 @@ export default function Portal() {
           )}
         </motion.div>
 
+        {/* Edit business info */}
+        <EditBusinessInfo client={client} onUpdated={(updated) => setClient((c) => ({ ...c, ...updated }))} />
+
         <div className="mt-12 mb-6 text-center text-[12px] text-slate-500">
           <Link to="/" className="hover:text-slate-900 transition">Back to raindrop.ai</Link>
           {" · "}
@@ -447,6 +644,169 @@ export default function Portal() {
         </div>
       </main>
     </div>
+  );
+}
+
+function EditBusinessInfo({ client, onUpdated }) {
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({
+    business_hours: client.business_hours || "",
+    services: client.services || "",
+    top_objections: client.top_objections || "",
+    brand_voice_notes: client.brand_voice_notes || "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
+
+  const dirty =
+    form.business_hours !== (client.business_hours || "") ||
+    form.services !== (client.services || "") ||
+    form.top_objections !== (client.top_objections || "") ||
+    form.brand_voice_notes !== (client.brand_voice_notes || "");
+
+  const save = async () => {
+    setSaving(true);
+    setError("");
+    setSaved(false);
+    try {
+      const sessionRes = await supabase?.auth.getSession();
+      const token = sessionRes?.data?.session?.access_token;
+      if (!token) throw new Error("Not signed in");
+
+      const res = await fetch("/.netlify/functions/update-client-prefs", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `Failed (HTTP ${res.status})`);
+
+      onUpdated?.(data.client || form);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch (e) {
+      setError(e.message || "Could not save changes.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const inputCls =
+    "w-full bg-cream-100 border border-slate-900/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-rain-500 transition placeholder:text-slate-400 text-slate-800";
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, ease: EASE, delay: 0.2 }}
+      className="mt-10"
+    >
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between gap-3 bg-cream-50 border border-slate-900/8 hover:border-slate-900/20 rounded-2xl px-6 py-5 transition"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-rain-100 flex items-center justify-center">
+            <Settings className="w-3.5 h-3.5 text-rain-700" />
+          </div>
+          <div className="text-left">
+            <div className="font-display text-lg text-slate-900 tracking-tight">
+              Tune your AI
+            </div>
+            <div className="text-[12px] text-slate-500">
+              Update hours, services, objections — changes go live within a minute
+            </div>
+          </div>
+        </div>
+        {open ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: EASE }}
+            className="overflow-hidden"
+          >
+            <div className="bg-cream-50 border border-t-0 border-slate-900/8 rounded-b-2xl -mt-px p-6 md:p-8 space-y-5">
+              <Field label="Business hours" hint="When you're open. Mon–Fri 8am–6pm, Sat 9am–2pm, etc.">
+                <input
+                  className={inputCls}
+                  value={form.business_hours}
+                  onChange={(e) => setForm((f) => ({ ...f, business_hours: e.target.value }))}
+                />
+              </Field>
+
+              <Field label="Services offered" hint="One per line or comma-separated. The AI will reference these when answering questions.">
+                <textarea
+                  className={`${inputCls} min-h-[100px] resize-y`}
+                  value={form.services}
+                  onChange={(e) => setForm((f) => ({ ...f, services: e.target.value }))}
+                />
+              </Field>
+
+              <Field label="Common objections" hint="Things callers often push back on — the AI will be ready for these.">
+                <textarea
+                  className={`${inputCls} min-h-[100px] resize-y`}
+                  value={form.top_objections}
+                  onChange={(e) => setForm((f) => ({ ...f, top_objections: e.target.value }))}
+                />
+              </Field>
+
+              <Field label="Brand voice notes" hint="Tone, do's and don'ts. Things you want the AI to sound like (or not).">
+                <textarea
+                  className={`${inputCls} min-h-[80px] resize-y`}
+                  value={form.brand_voice_notes}
+                  onChange={(e) => setForm((f) => ({ ...f, brand_voice_notes: e.target.value }))}
+                />
+              </Field>
+
+              {error && (
+                <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  {error}
+                </div>
+              )}
+
+              <div className="flex items-center justify-between pt-2">
+                <p className="text-[11px] text-slate-500 leading-relaxed max-w-md">
+                  Heads up: AI changes take effect on your <strong>next</strong> call,
+                  not calls already in progress.
+                </p>
+                <button
+                  onClick={save}
+                  disabled={saving || !dirty}
+                  className="inline-flex items-center gap-2 bg-slate-900 text-cream-100 px-5 py-2.5 rounded-full text-sm font-medium hover:bg-rain-700 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> :
+                   saved ? <Check className="w-4 h-4" /> :
+                   <Save className="w-4 h-4" />}
+                  {saving ? "Saving…" : saved ? "Saved" : "Save changes"}
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
+function Field({ label, hint, children }) {
+  return (
+    <label className="block">
+      <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-slate-500 mb-1.5">
+        {label}
+      </div>
+      {children}
+      {hint && <div className="text-[11px] text-slate-400 mt-1.5 leading-relaxed">{hint}</div>}
+    </label>
   );
 }
 
