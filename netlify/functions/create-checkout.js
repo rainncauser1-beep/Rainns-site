@@ -45,10 +45,13 @@ exports.handler = async (event) => {
     return { statusCode: 400, body: JSON.stringify({ error: "Invalid JSON body" }) };
   }
 
-  const { client_id, client_email, client_name, setup_amount, monthly_amount } = body;
+  const { client_id, client_email, client_name, setup_amount, monthly_amount, trial_days } = body;
   if (!client_id) {
     return { statusCode: 400, body: JSON.stringify({ error: "client_id is required" }) };
   }
+
+  const trialDays = Number(trial_days);
+  const hasTrial = Number.isFinite(trialDays) && trialDays > 0;
 
   const setupDollars = Number(setup_amount);
   const monthlyDollars = Number(monthly_amount);
@@ -95,18 +98,26 @@ exports.handler = async (event) => {
       });
     }
 
+    const subscriptionData = {
+      metadata: { client_id, client_name: businessLabel },
+    };
+    // A free trial delays the first MONTHLY charge by N days. The setup fee
+    // (a one-time line item) still bills immediately at checkout.
+    if (hasTrial) {
+      subscriptionData.trial_period_days = Math.round(trialDays);
+    }
+
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       ...(client_email ? { customer_email: client_email } : {}),
       line_items: lineItems,
-      subscription_data: {
-        metadata: { client_id, client_name: businessLabel },
-      },
+      subscription_data: subscriptionData,
       metadata: {
         client_id,
         client_name: businessLabel,
         setup_amount: String(setupDollars),
         monthly_amount: String(monthlyDollars),
+        trial_days: hasTrial ? String(Math.round(trialDays)) : "0",
       },
       success_url: `${appUrl}/?paid=1`,
       cancel_url: `${appUrl}/get-started`,

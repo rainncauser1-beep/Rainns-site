@@ -5,6 +5,7 @@ import {
   Phone, Power, LogOut, MapPin, Clock, TrendingUp, Calendar,
   PhoneCall, MessageSquare, ChevronDown, ChevronUp, AlertCircle, Loader2,
   BarChart3, Wifi, Settings, Save, Check, ArrowUp, ArrowDown, Minus,
+  CreditCard, PauseCircle, PlayCircle, XCircle,
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import RaindropMark from "../components/RaindropMark";
@@ -637,6 +638,9 @@ export default function Portal() {
         {/* Edit business info */}
         <EditBusinessInfo client={client} onUpdated={(updated) => setClient((c) => ({ ...c, ...updated }))} />
 
+        {/* Manage subscription */}
+        <ManageSubscription client={client} onChanged={(status) => setClient((c) => ({ ...c, payment_status: status }))} />
+
         <div className="mt-12 mb-6 text-center text-[12px] text-slate-500">
           <Link to="/" className="hover:text-slate-900 transition">Back to raindrop.ai</Link>
           {" · "}
@@ -807,6 +811,169 @@ function Field({ label, hint, children }) {
       {children}
       {hint && <div className="text-[11px] text-slate-400 mt-1.5 leading-relaxed">{hint}</div>}
     </label>
+  );
+}
+
+const SUB_STATUS_COPY = {
+  active:    { label: "Active",    cls: "bg-emerald-100 text-emerald-800" },
+  trialing:  { label: "Free trial", cls: "bg-rain-100 text-rain-800" },
+  paused:    { label: "Paused",    cls: "bg-amber-100 text-amber-800" },
+  past_due:  { label: "Past due",  cls: "bg-amber-100 text-amber-800" },
+  canceling: { label: "Ends at period end", cls: "bg-rose-100 text-rose-800" },
+  canceled:  { label: "Canceled",  cls: "bg-rose-100 text-rose-800" },
+  unpaid:    { label: "Not started", cls: "bg-slate-100 text-slate-700" },
+};
+
+function ManageSubscription({ client, onChanged }) {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState("");
+  const [error, setError] = useState("");
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const status = client.payment_status || "unpaid";
+  const statusCopy = SUB_STATUS_COPY[status] || SUB_STATUS_COPY.unpaid;
+  const hasSub = Boolean(client.stripe_subscription_id);
+
+  const act = async (action) => {
+    setBusy(action);
+    setError("");
+    try {
+      const sessionRes = await supabase?.auth.getSession();
+      const token = sessionRes?.data?.session?.access_token;
+      if (!token) throw new Error("Not signed in");
+
+      const res = await fetch("/.netlify/functions/manage-subscription", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ action }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `Failed (HTTP ${res.status})`);
+      onChanged?.(data.payment_status);
+      setConfirmCancel(false);
+    } catch (e) {
+      setError(e.message || "Something went wrong.");
+    } finally {
+      setBusy("");
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, ease: EASE, delay: 0.25 }}
+      className="mt-3"
+    >
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between gap-3 bg-cream-50 border border-slate-900/8 hover:border-slate-900/20 rounded-2xl px-6 py-5 transition"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-rain-100 flex items-center justify-center">
+            <CreditCard className="w-3.5 h-3.5 text-rain-700" />
+          </div>
+          <div className="text-left">
+            <div className="font-display text-lg text-slate-900 tracking-tight flex items-center gap-2">
+              Subscription
+              <span className={`text-[10px] uppercase tracking-wider font-medium px-2 py-0.5 rounded-full ${statusCopy.cls}`}>
+                {statusCopy.label}
+              </span>
+            </div>
+            <div className="text-[12px] text-slate-500">
+              Pause for the slow season or cancel anytime — no phone call required
+            </div>
+          </div>
+        </div>
+        {open ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: EASE }}
+            className="overflow-hidden"
+          >
+            <div className="bg-cream-50 border border-t-0 border-slate-900/8 rounded-b-2xl -mt-px p-6 md:p-8">
+              {!hasSub ? (
+                <p className="text-sm text-slate-600 leading-relaxed">
+                  You don't have an active subscription on file yet. Once your
+                  payment is set up, you'll be able to pause or cancel here.
+                </p>
+              ) : (
+                <>
+                  <div className="grid sm:grid-cols-2 gap-3 mb-5">
+                    {status === "paused" ? (
+                      <button
+                        onClick={() => act("resume")}
+                        disabled={busy}
+                        className="flex items-center justify-center gap-2 bg-emerald-600 text-white py-3 rounded-xl text-sm font-medium hover:bg-emerald-700 transition disabled:opacity-50"
+                      >
+                        {busy === "resume" ? <Loader2 className="w-4 h-4 animate-spin" /> : <PlayCircle className="w-4 h-4" />}
+                        Resume billing
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => act("pause")}
+                        disabled={busy || status === "canceled" || status === "canceling"}
+                        className="flex items-center justify-center gap-2 bg-cream-100 border border-slate-900/15 text-slate-800 py-3 rounded-xl text-sm font-medium hover:border-slate-900/35 transition disabled:opacity-50"
+                      >
+                        {busy === "pause" ? <Loader2 className="w-4 h-4 animate-spin" /> : <PauseCircle className="w-4 h-4" />}
+                        Pause billing
+                      </button>
+                    )}
+
+                    {!confirmCancel ? (
+                      <button
+                        onClick={() => setConfirmCancel(true)}
+                        disabled={busy || status === "canceled" || status === "canceling"}
+                        className="flex items-center justify-center gap-2 bg-cream-100 border border-slate-900/15 text-rose-700 py-3 rounded-xl text-sm font-medium hover:border-rose-300 transition disabled:opacity-50"
+                      >
+                        <XCircle className="w-4 h-4" />
+                        Cancel
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => act("cancel")}
+                        disabled={busy}
+                        className="flex items-center justify-center gap-2 bg-rose-600 text-white py-3 rounded-xl text-sm font-medium hover:bg-rose-700 transition disabled:opacity-50"
+                      >
+                        {busy === "cancel" ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
+                        Confirm cancel
+                      </button>
+                    )}
+                  </div>
+
+                  {confirmCancel && (
+                    <p className="text-[12px] text-slate-500 mb-4 leading-relaxed">
+                      You'll keep service through the end of your current billing
+                      period, then it stops. You can resubscribe anytime.{" "}
+                      <button onClick={() => setConfirmCancel(false)} className="text-slate-800 underline">
+                        Never mind
+                      </button>
+                    </p>
+                  )}
+
+                  <div className="space-y-1.5 text-[12px] text-slate-500 leading-relaxed">
+                    <p><strong className="text-slate-700">Pause:</strong> stops billing while you're slow. No charges until you resume.</p>
+                    <p><strong className="text-slate-700">Cancel:</strong> ends at your billing period — no early-termination fee, ever.</p>
+                  </div>
+                </>
+              )}
+
+              {error && (
+                <div className="mt-4 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  {error}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }
 

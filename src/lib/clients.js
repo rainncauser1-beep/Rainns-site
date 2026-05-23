@@ -3,7 +3,10 @@ import { supabase } from "./supabase";
 export const PAYMENT_STATUSES = {
   unpaid:     { label: "Unpaid",     tone: "slate" },
   active:     { label: "Active",     tone: "emerald" },
+  trialing:   { label: "Trialing",   tone: "rain" },
+  paused:     { label: "Paused",     tone: "amber" },
   past_due:   { label: "Past Due",   tone: "amber" },
+  canceling:  { label: "Canceling",  tone: "rose" },
   canceled:   { label: "Canceled",   tone: "rose" },
 };
 

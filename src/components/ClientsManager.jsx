@@ -15,9 +15,12 @@ const TONE = {
 };
 
 const PAYMENT_BADGE = {
-  active:   { label: "Paid", cls: "bg-emerald-100 text-emerald-700" },
-  past_due: { label: "Past Due", cls: "bg-amber-100 text-amber-700" },
-  canceled: { label: "Canceled", cls: "bg-rose-100 text-rose-700" },
+  active:    { label: "Paid", cls: "bg-emerald-100 text-emerald-700" },
+  trialing:  { label: "Trial", cls: "bg-rain-100 text-rain-700" },
+  paused:    { label: "Paused", cls: "bg-amber-100 text-amber-700" },
+  past_due:  { label: "Past Due", cls: "bg-amber-100 text-amber-700" },
+  canceling: { label: "Canceling", cls: "bg-rose-100 text-rose-700" },
+  canceled:  { label: "Canceled", cls: "bg-rose-100 text-rose-700" },
 };
 
 function ClientCard({ client, onClick }) {

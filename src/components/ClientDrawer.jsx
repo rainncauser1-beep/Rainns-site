@@ -54,6 +54,7 @@ export default function ClientDrawer({ open, client, onClose, onSaved }) {
   const [generatingLink, setGeneratingLink] = useState(false);
   const [checkoutUrl, setCheckoutUrl] = useState("");
   const [linkCopied, setLinkCopied] = useState(false);
+  const [trialDays, setTrialDays] = useState("");
 
   const isEdit = Boolean(client?.id);
 
@@ -187,6 +188,7 @@ export default function ClientDrawer({ open, client, onClose, onSaved }) {
           client_name: form.business_name || undefined,
           setup_amount: form.setup_fee === "" ? 0 : setupNum,
           monthly_amount: monthlyNum,
+          trial_days: trialDays === "" ? 0 : Number(trialDays),
         }),
       });
 
@@ -423,11 +425,28 @@ export default function ClientDrawer({ open, client, onClose, onSaved }) {
                   </Field>
                 </div>
 
+                {/* Free trial */}
+                <div className="mb-4">
+                  <Field label="Free trial (days)" hint="Optional — delays the first monthly charge. Setup fee still bills today. Leave blank for none.">
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        className={inputCls}
+                        value={trialDays}
+                        onChange={(e) => setTrialDays(e.target.value)}
+                        placeholder="0"
+                      />
+                    </div>
+                  </Field>
+                </div>
+
                 {/* First invoice preview */}
                 {(Number(form.setup_fee) > 0 || Number(form.monthly_recurring) > 0) && (
                   <div className="mb-4 p-3 bg-cream-100 border border-slate-900/8 rounded-xl">
                     <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-slate-500 mb-2">
-                      First invoice
+                      Due today
                     </div>
                     <div className="flex justify-between text-[13px] text-slate-700 mb-1">
                       <span>Setup fee</span>
@@ -438,17 +457,21 @@ export default function ClientDrawer({ open, client, onClose, onSaved }) {
                     <div className="flex justify-between text-[13px] text-slate-700 mb-2 pb-2 border-b border-slate-900/8">
                       <span>First month</span>
                       <span className="font-mono tabular-nums">
-                        ${Number(form.monthly_recurring || 0).toLocaleString()}
+                        {Number(trialDays) > 0
+                          ? `$0 · ${Number(trialDays)}-day trial`
+                          : `$${Number(form.monthly_recurring || 0).toLocaleString()}`}
                       </span>
                     </div>
                     <div className="flex justify-between text-[14px] font-medium text-slate-900">
-                      <span>Due today</span>
+                      <span>Total due today</span>
                       <span className="font-mono tabular-nums">
-                        ${(Number(form.setup_fee || 0) + Number(form.monthly_recurring || 0)).toLocaleString()}
+                        ${(Number(form.setup_fee || 0) + (Number(trialDays) > 0 ? 0 : Number(form.monthly_recurring || 0))).toLocaleString()}
                       </span>
                     </div>
                     <div className="mt-1.5 text-[11px] text-slate-500">
-                      Then ${Number(form.monthly_recurring || 0).toLocaleString()}/mo recurring
+                      {Number(trialDays) > 0
+                        ? `Then $${Number(form.monthly_recurring || 0).toLocaleString()}/mo starting in ${Number(trialDays)} days`
+                        : `Then $${Number(form.monthly_recurring || 0).toLocaleString()}/mo recurring`}
                     </div>
                   </div>
                 )}
