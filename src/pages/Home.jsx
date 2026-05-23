@@ -5,6 +5,7 @@ import { ArrowRight, Sparkles, TrendingUp, Globe, ShieldCheck, Clock, Database, 
 import WaitlistModal from "../components/WaitlistModal";
 import CallDemoModal from "../components/CallDemoModal";
 import ContactSection from "../components/ContactSection";
+import RoiCalculator from "../components/RoiCalculator";
 
 const EASE = [0.22, 1, 0.36, 1];
 
@@ -206,6 +207,9 @@ export default function Home() {
           </motion.div>
         </div>
       </section>
+
+      {/* ROI calculator */}
+      <RoiCalculator />
 
       {/* Bottom CTA */}
       <section className="px-6 py-28">

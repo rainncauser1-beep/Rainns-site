@@ -7,7 +7,7 @@ import {
 import { AnimatePresence as AP } from "framer-motion";
 import CallDemoModal from "../components/CallDemoModal";
 import ContactSection from "../components/ContactSection";
-import RecoveredRevenue from "../components/RecoveredRevenue";
+import RoiCalculator from "../components/RoiCalculator";
 
 const EASE = [0.22, 1, 0.36, 1];
 const fadeUp = {
@@ -251,7 +251,7 @@ export default function Automations() {
         </div>
       </section>
 
-      <RecoveredRevenue />
+      <RoiCalculator />
 
       <ContactSection />
       <CallDemoModal open={callOpen} onClose={() => setCallOpen(false)} />
