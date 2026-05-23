@@ -68,6 +68,8 @@ export default function CallDemoModal({ open, onClose }) {
   const [agentTalking, setAgentTalking] = useState(false);
   const [micError, setMicError] = useState(false);
   const [callError, setCallError] = useState("");
+  const [bizName, setBizName] = useState("");
+  const [trade, setTrade] = useState("");
   const clientRef = useRef(null);
 
   // Load existing trial data on open
@@ -118,7 +120,14 @@ export default function CallDemoModal({ open, onClose }) {
     }
 
     try {
-      const res = await fetch("/.netlify/functions/create-call", { method: "POST" });
+      const res = await fetch("/.netlify/functions/create-call", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          business_name: bizName.trim() || undefined,
+          trade: trade || undefined,
+        }),
+      });
       if (!res.ok) throw new Error("Could not start call. Please try again.");
       const { access_token, error } = await res.json();
       if (error) throw new Error(error);
@@ -149,7 +158,7 @@ export default function CallDemoModal({ open, onClose }) {
     } catch (err) {
       setCallError(err.message);
     }
-  }, [email, triesUsed]);
+  }, [email, triesUsed, bizName, trade]);
 
   const endCall = () => {
     clientRef.current?.stopCall();
@@ -252,12 +261,41 @@ export default function CallDemoModal({ open, onClose }) {
                   </div>
 
                   <div className="font-display text-2xl text-slate-900 mb-2 tracking-tight">
-                    Ready to connect.
+                    {bizName.trim() ? "Hear it as your business." : "Ready to connect."}
                   </div>
-                  <p className="text-slate-600 text-sm mb-6">
-                    You'll be connected to <strong>Ava</strong>, our Nashville AI receptionist.
-                    Ask her anything.
+                  <p className="text-slate-600 text-sm mb-5">
+                    {bizName.trim() ? (
+                      <>Ava will answer as if she works the front desk at <strong>{bizName.trim()}</strong>. Ask her anything a customer would.</>
+                    ) : (
+                      <>You'll be connected to <strong>Ava</strong>, our Nashville AI receptionist. Add your business below to hear her answer as <em>you</em>.</>
+                    )}
                   </p>
+
+                  {/* Personalize */}
+                  <div className="text-left space-y-2.5 mb-6">
+                    <input
+                      value={bizName}
+                      onChange={(e) => setBizName(e.target.value)}
+                      placeholder="Your business name (optional)"
+                      maxLength={80}
+                      className="w-full bg-cream-100 border border-slate-900/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-rain-500 transition placeholder:text-slate-400"
+                    />
+                    <select
+                      value={trade}
+                      onChange={(e) => setTrade(e.target.value)}
+                      className="w-full bg-cream-100 border border-slate-900/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-rain-500 transition text-slate-700"
+                    >
+                      <option value="">Your trade (optional)</option>
+                      <option value="roofing">Roofing</option>
+                      <option value="HVAC">HVAC</option>
+                      <option value="plumbing">Plumbing</option>
+                      <option value="electrical">Electrical</option>
+                      <option value="med spa">Med Spa</option>
+                      <option value="landscaping">Landscaping</option>
+                      <option value="auto detailing">Auto Detailing</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
 
                   {micError && (
                     <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4 text-sm text-red-700">
@@ -298,7 +336,7 @@ export default function CallDemoModal({ open, onClose }) {
                 >
                   <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-rain-600 mb-6 flex items-center justify-center gap-2">
                     <span className="w-1.5 h-1.5 bg-rain-500 rounded-full animate-pulse" />
-                    Live · Connected to Ava
+                    Live · {bizName.trim() ? bizName.trim() : "Connected to Ava"}
                   </div>
 
                   <div className="flex flex-col items-center gap-5 mb-8">
