@@ -30,10 +30,10 @@ const steps = [
   {
     n: "02",
     icon: Calendar,
-    title: "Book a 15-min discovery call",
-    body: "We hop on Zoom for 15 minutes. You tell us about your business, the calls you're missing, and what you want the AI to handle. We tell you exactly what it'd cost and what we'd build.",
-    actionLabel: "Pick a time",
-    duration: "Takes 15 minutes",
+    title: "Tell us about your business",
+    body: "Fill out a quick 3-minute setup — your hours, services, and the calls you're missing — then grab a 15-minute call. We show up already knowing your business and walk through exactly what we'd build.",
+    actionLabel: "Start setup",
+    duration: "Takes 3 minutes",
     accent: "slate",
   },
   {
@@ -91,8 +91,8 @@ const faqs = [
 function StepCard({ s, i, onDemo }) {
   const Icon = s.icon;
   const onClick = i === 0 ? onDemo : null;
-  const href = i === 1 ? CAL_LINK : null;
-  const internalLink = i === 2 ? "/automations#savings" : null;
+  const href = null;
+  const internalLink = i === 1 ? "/onboarding" : i === 2 ? "/automations#savings" : null;
 
   const buttonContent = (
     <>
@@ -218,15 +218,13 @@ export default function GetStarted() {
               <Mic className="w-4 h-4" />
               Try the demo first
             </button>
-            <a
-              href={CAL_LINK}
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              to="/onboarding"
               className="group inline-flex items-center gap-2 bg-cream-50 border border-slate-900/10 text-slate-800 px-6 py-4 rounded-full font-medium hover:border-slate-900/30 transition"
             >
               <Calendar className="w-4 h-4" />
-              Skip ahead — book 15 min
-            </a>
+              Set up your AI
+            </Link>
           </motion.div>
         </motion.div>
       </section>

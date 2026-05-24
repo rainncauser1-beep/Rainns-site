@@ -6,6 +6,7 @@ import WaitlistModal from "../components/WaitlistModal";
 import CallDemoModal from "../components/CallDemoModal";
 import ContactSection from "../components/ContactSection";
 import RoiCalculator from "../components/RoiCalculator";
+import GuaranteeBand from "../components/GuaranteeBand";
 
 const EASE = [0.22, 1, 0.36, 1];
 
@@ -210,6 +211,9 @@ export default function Home() {
 
       {/* ROI calculator */}
       <RoiCalculator />
+
+      {/* ROI guarantee */}
+      <GuaranteeBand />
 
       {/* Bottom CTA */}
       <section className="px-6 py-28">

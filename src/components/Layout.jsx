@@ -100,7 +100,7 @@ function Nav() {
               </Link>
             )}
             <Link
-              to="/#contact"
+              to="/onboarding"
               className="hidden md:inline-flex items-center gap-1.5 bg-rain-700 text-cream-100 px-4 py-2 rounded-full text-[13px] font-medium hover:bg-rain-600 transition"
             >
               Book a Call
@@ -167,7 +167,7 @@ function Nav() {
                 </Link>
               )}
               <Link
-                to="/#contact"
+                to="/onboarding"
                 className="flex items-center justify-center gap-2 bg-slate-900 text-cream-100 py-4 rounded-full font-medium"
               >
                 Book a Call

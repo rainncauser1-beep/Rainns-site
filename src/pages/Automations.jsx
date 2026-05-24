@@ -8,6 +8,7 @@ import { AnimatePresence as AP } from "framer-motion";
 import CallDemoModal from "../components/CallDemoModal";
 import ContactSection from "../components/ContactSection";
 import RoiCalculator from "../components/RoiCalculator";
+import GuaranteeBand from "../components/GuaranteeBand";
 
 const EASE = [0.22, 1, 0.36, 1];
 const fadeUp = {
@@ -252,6 +253,8 @@ export default function Automations() {
       </section>
 
       <RoiCalculator />
+
+      <GuaranteeBand />
 
       <ContactSection />
       <CallDemoModal open={callOpen} onClose={() => setCallOpen(false)} />

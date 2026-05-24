@@ -9,6 +9,7 @@ import Automations from "./pages/Automations";
 import Marketing from "./pages/Marketing";
 import Architecture from "./pages/Architecture";
 import GetStarted from "./pages/GetStarted";
+import Onboarding from "./pages/Onboarding";
 import Login from "./pages/Login";
 import Admin from "./pages/Admin";
 import Portal from "./pages/Portal";
@@ -60,6 +61,9 @@ function AnimatedRoutes() {
             </Layout>
           }
         />
+
+        {/* Onboarding wizard — standalone, full-screen (no nav/footer) */}
+        <Route path="/onboarding" element={<Onboarding />} />
 
         {/* Auth — no shared Layout (full-screen login) */}
         <Route path="/login" element={<Login />} />
