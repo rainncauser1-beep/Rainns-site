@@ -239,7 +239,7 @@ export default function Onboarding() {
                   <Field label="Email" hint="We'll send your AI number + portal access here.">
                     <input type="email" className={inputCls} value={form.owner_email} onChange={set("owner_email")} placeholder="jane@apexroofing.com" />
                   </Field>
-                  <Field label="Mobile" hint="Where the AI texts you new leads.">
+                  <Field label="Mobile" hint="Where we reach you about new leads.">
                     <input type="tel" className={inputCls} value={form.owner_phone} onChange={set("owner_phone")} placeholder="(615) 555-0123" />
                   </Field>
                   <div className="flex items-start gap-2.5 text-[12px] text-slate-500 bg-cream-100 border border-slate-900/8 rounded-xl px-4 py-3">

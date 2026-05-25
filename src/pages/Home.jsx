@@ -35,20 +35,20 @@ const services = [
     id: "capture",
     to: "/get-started",
     eyebrow: "Active · Live Now",
-    title: "Texts You the Lead",
+    title: "Sends You the Lead",
     tagline: "The Handoff",
-    desc: "The second a call ends, the homeowner's name, number, and what they need hit your phone. You call back warm — never cold, never too late.",
+    desc: "The second a call ends, the homeowner's name, number, summary, and transcript land on your phone. You call back warm — never cold, never too late.",
     icon: TrendingUp,
     active: true,
-    stat: { v: "Instant", l: "Lead handoff" },
+    stat: { v: "Instant", l: "Lead alert" },
   },
   {
     id: "book",
     to: "/get-started",
     eyebrow: "Active · Live Now",
-    title: "Books the Estimate",
-    tagline: "The Calendar",
-    desc: "Koemori offers your real availability and books the inspection right on your calendar — while you're still up on the last one.",
+    title: "Lines Up the Estimate",
+    tagline: "The Handoff",
+    desc: "Koemori walks the homeowner through your booking, locks in their preferred time, and hands you a ready-to-confirm estimate — while you're still up on the last roof.",
     icon: Globe,
     active: true,
     stat: { v: "24/7", l: "On the clock" },
@@ -58,7 +58,7 @@ const services = [
 const whyStats = [
   { icon: Clock, stat: "62%", body: "of calls to roofers go unanswered. Koemori answers 100% — day, night, and through every storm." },
   { icon: Database, stat: "$8,500", body: "is the average roofing job. Miss two calls a month and that's six figures a year walking next door." },
-  { icon: ShieldCheck, stat: "10DLC", body: "compliant by default — every lead text deliverable, no carrier blocks." },
+  { icon: ShieldCheck, stat: "100%", body: "of your calls answered — nights, weekends, storm season. The line is never busy, never closed." },
 ];
 
 export default function Home() {
@@ -101,7 +101,7 @@ export default function Home() {
             className="text-lg md:text-xl text-slate-600 max-w-xl leading-relaxed mb-6"
           >
             Koemori is the AI receptionist built for roofing companies. It answers every call in
-            under 3 seconds, texts you the lead, and books the estimate — so you never lose a job
+            under 3 seconds, sends you the lead, and lines up the estimate — so you never lose a job
             to a missed phone again.
           </motion.p>
 

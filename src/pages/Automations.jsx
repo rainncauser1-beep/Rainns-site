@@ -25,18 +25,18 @@ const features = [
   },
   {
     icon: MessageSquare,
-    title: "Instant SMS handoff",
-    body: "The moment a call ends, the full transcript and contact info hit your phone via Zapier. You call back warm — never cold.",
+    title: "Instant lead alerts",
+    body: "The moment a call ends, the homeowner's name, number, summary, and full transcript land in your inbox and your portal. You call back warm — never cold.",
   },
   {
     icon: Calendar,
-    title: "Live calendar booking",
-    body: "Integrates with Google Calendar, GoHighLevel, or your CRM. Books appointments while you're on the job.",
+    title: "Lines up the estimate",
+    body: "Koemori walks the homeowner through your booking process, locks in their preferred time window, and hands you a ready-to-confirm estimate.",
   },
   {
     icon: Database,
-    title: "Database reactivation",
-    body: "AI-personalized SMS sequences that wake up dead leads and book jobs — usually within 48 hours.",
+    title: "Every call logged",
+    body: "Recording, transcript, summary, and sentiment for every call — all in your portal. Nothing slips through, nothing forgotten.",
   },
 ];
 
@@ -171,7 +171,7 @@ export default function Automations() {
               className="text-lg text-slate-600 leading-relaxed mb-10 max-w-lg"
             >
               Built for roofers. Koemori picks up every inbound call in under 2 rings, qualifies
-              the homeowner, books the estimate, and texts you the full lead before they hang up —
+              the homeowner, lines up the estimate, and sends you the full lead before they hang up —
               while you're still up on the last roof.
             </motion.p>
 

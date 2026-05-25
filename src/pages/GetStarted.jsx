@@ -40,7 +40,7 @@ const steps = [
     n: "03",
     icon: Rocket,
     title: "We deploy your Koemori line",
-    body: "Within 48 hours we build your custom AI receptionist, wire up instant lead texts to your phone, give you the carrier code to forward your number, and run live test calls together.",
+    body: "Within 48 hours we build your custom AI receptionist, wire up instant lead alerts to your phone, give you the carrier code to forward your number, and run live test calls together.",
     actionLabel: "See what it could earn",
     duration: "Live in 48 hours",
     accent: "rain",
@@ -51,7 +51,7 @@ const handles = {
   koemori: [
     "Custom AI receptionist tuned to your roofing company",
     "All inbound calls answered in <3 seconds, 24/7",
-    "Real-time text handoff of every lead to your phone",
+    "Real-time lead alerts to your phone (email + portal)",
     "Roofing objection library + your brand voice",
     "Calendar integration and live estimate booking",
     "10DLC compliance + ongoing optimization",
@@ -72,7 +72,7 @@ const faqs = [
   },
   {
     q: "What if a caller needs something the AI can't handle?",
-    a: "The agent escalates cleanly: it captures the caller's info, says \"let me get one of our specialists to call you right back,\" and SMS-handoffs to your phone. You call back warm, never cold.",
+    a: "The agent escalates cleanly: it captures the caller's info, says \"let me get one of our specialists to call you right back,\" and instantly sends the lead to your phone. You call back warm, never cold.",
   },
   {
     q: "Do I keep my existing phone number?",
