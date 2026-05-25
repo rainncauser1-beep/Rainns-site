@@ -5,7 +5,7 @@ import { X, Mic, MicOff, PhoneOff, ArrowRight, Phone } from "lucide-react";
 import { logDemoTrial, incrementDemoTrial } from "../lib/supabase";
 
 const EASE = [0.22, 1, 0.36, 1];
-const STORAGE_KEY = "raindrop_demo";
+const STORAGE_KEY = "koemori_demo";
 const MAX_TRIES = 5;
 
 function getTrialData() {
@@ -233,7 +233,7 @@ export default function CallDemoModal({ open, onClose }) {
                     </button>
                   </form>
                   <p className="mt-4 text-[11px] text-slate-500 text-center">
-                    By continuing you agree to receive SMS/call outreach from Raindrop AI.
+                    By continuing you agree to receive SMS/call outreach from Koemori.
                     Reply STOP to unsubscribe.
                   </p>
                 </motion.div>
@@ -285,15 +285,12 @@ export default function CallDemoModal({ open, onClose }) {
                       onChange={(e) => setTrade(e.target.value)}
                       className="w-full bg-cream-100 border border-slate-900/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-rain-500 transition text-slate-700"
                     >
-                      <option value="">Your trade (optional)</option>
-                      <option value="roofing">Roofing</option>
-                      <option value="HVAC">HVAC</option>
-                      <option value="plumbing">Plumbing</option>
-                      <option value="electrical">Electrical</option>
-                      <option value="med spa">Med Spa</option>
-                      <option value="landscaping">Landscaping</option>
-                      <option value="auto detailing">Auto Detailing</option>
-                      <option value="other">Other</option>
+                      <option value="">Your focus (optional)</option>
+                      <option value="residential roofing">Residential roofing</option>
+                      <option value="commercial roofing">Commercial roofing</option>
+                      <option value="storm & restoration">Storm &amp; restoration</option>
+                      <option value="repair & maintenance">Repair &amp; maintenance</option>
+                      <option value="roofing">General roofing</option>
                     </select>
                   </div>
 

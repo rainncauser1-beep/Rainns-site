@@ -135,7 +135,7 @@ export default function Admin() {
             <Link to="/" className="flex items-center gap-2.5 hover:opacity-70 transition">
               <RaindropMark size={24} />
               <span className="font-display text-xl text-slate-900 tracking-tight">
-                Raindrop<span className="text-rain-500">.</span>
+                Koemori<span className="text-rain-500">.</span>
               </span>
             </Link>
             <span className="hidden sm:inline font-mono text-[10px] uppercase tracking-[0.22em] text-slate-500 ml-2">

@@ -39,8 +39,8 @@ const steps = [
   {
     n: "03",
     icon: Rocket,
-    title: "We deploy your agent",
-    body: "Within 48 hours we provision your custom Retell agent, build your SMS-handoff Zap, give you the carrier code to forward your number, and run live test calls together.",
+    title: "We deploy your Koemori line",
+    body: "Within 48 hours we build your custom AI receptionist, wire up instant lead texts to your phone, give you the carrier code to forward your number, and run live test calls together.",
     actionLabel: "See what it could earn",
     duration: "Live in 48 hours",
     accent: "rain",
@@ -48,17 +48,17 @@ const steps = [
 ];
 
 const handles = {
-  raindrop: [
-    "Custom AI receptionist tuned to your business",
+  koemori: [
+    "Custom AI receptionist tuned to your roofing company",
     "All inbound calls answered in <3 seconds, 24/7",
-    "Real-time SMS handoff to your phone",
-    "Objection library and brand voice tuning",
-    "Calendar integration and live booking",
+    "Real-time text handoff of every lead to your phone",
+    "Roofing objection library + your brand voice",
+    "Calendar integration and live estimate booking",
     "10DLC compliance + ongoing optimization",
   ],
   you: [
     "Forward your business number (5-min carrier code)",
-    "Tell us your top 5 services + common objections",
+    "Tell us your services + the calls you keep missing",
     "Pick a brand voice direction (we can suggest)",
     "Show up to the 15-min discovery call",
     "Pay your custom quote once we're confirmed live",
@@ -76,7 +76,7 @@ const faqs = [
   },
   {
     q: "Do I keep my existing phone number?",
-    a: "Yes. We don't port your number. Your existing carrier (Verizon, AT&T, etc.) supports conditional call forwarding — we give you a 6-digit code to dial, and inbound calls forward to your Retell agent after 2 rings.",
+    a: "Yes. We don't port your number. Your existing carrier (Verizon, AT&T, etc.) supports conditional call forwarding — we give you a 6-digit code to dial, and inbound calls forward to your Koemori line after 2 rings.",
   },
   {
     q: "Can I cancel anytime?",
@@ -276,11 +276,11 @@ export default function GetStarted() {
               <div className="absolute -bottom-20 -right-20 w-56 h-56 rounded-full bg-rain-700/30 blur-3xl" />
               <div className="relative">
                 <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-rain-400 mb-3">
-                  Raindrop handles
+                  Koemori handles
                 </div>
                 <h3 className="font-display text-2xl tracking-tight mb-6">All the AI stuff.</h3>
                 <ul className="space-y-3">
-                  {handles.raindrop.map((h, i) => (
+                  {handles.koemori.map((h, i) => (
                     <li key={i} className="flex items-start gap-3 text-cream-100/85 text-[15px]">
                       <Check className="w-4 h-4 text-rain-400 mt-1 flex-shrink-0" />
                       {h}

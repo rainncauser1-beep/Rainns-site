@@ -8,10 +8,8 @@ import { supabase } from "../lib/supabase";
 const EASE = [0.22, 1, 0.36, 1];
 
 const navLinks = [
-  { to: "/automations", label: "AI Automations" },
-  { to: "/marketing", label: "Marketing" },
-  { to: "/architecture", label: "Digital Arch" },
-  { to: "/get-started", label: "Get Started" },
+  { to: "/automations", label: "What You Get" },
+  { to: "/get-started", label: "How It Works" },
 ];
 
 function Nav() {
@@ -55,7 +53,7 @@ function Nav() {
           <Link to="/" className="flex items-center gap-2.5 flex-shrink-0">
             <RaindropMark size={26} />
             <span className="font-display text-xl text-slate-900 tracking-tight">
-              Raindrop<span className="text-rain-500">.</span>
+              Koemori<span className="text-rain-500">.</span>
               <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-slate-500 ml-2 hidden sm:inline">
                 AI
               </span>
@@ -190,17 +188,19 @@ function Footer() {
             <Link to="/" className="flex items-center gap-2.5 mb-5">
               <RaindropMark size={24} />
               <span className="font-display text-xl text-slate-900 tracking-tight">
-                Raindrop<span className="text-rain-500">.</span>
+                Koemori<span className="text-rain-500">.</span>
               </span>
             </Link>
             <p className="text-sm text-slate-600 max-w-sm leading-relaxed">
-              Raindrop AI is the trading name of Rainn's Enterprises, a Nashville-based holding
-              company deploying intelligent systems for local service brands.
+              <strong className="text-slate-800">Koemori</strong> — from the Japanese
+              声 <em>(koe, "voice")</em> + 守り <em>(mamori, "to guard")</em>: the voice that
+              guards your roofing business. Every call answered, every job caught — even when
+              you're on the roof.
             </p>
             <div className="mt-5 space-y-2">
               <div className="inline-flex items-center gap-2 text-[13px] text-slate-600">
                 <Mail className="w-3.5 h-3.5 text-rain-500" />
-                hello@raindrop.ai
+                hello@koemori.ai
               </div>
               <div className="flex items-center gap-2 text-[13px] text-slate-600">
                 <MapPin className="w-3.5 h-3.5 text-rain-500" />
@@ -210,35 +210,35 @@ function Footer() {
           </div>
           <div className="md:col-span-2">
             <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-4">
-              Services
+              The System
             </div>
             <ul className="space-y-2 text-sm text-slate-600">
               <li>
                 <Link to="/automations" className="hover:text-slate-900 transition">
-                  AI Automations
+                  What You Get
                 </Link>
               </li>
               <li>
-                <Link to="/marketing" className="hover:text-slate-900 transition">
-                  Performance Marketing
+                <Link to="/get-started" className="hover:text-slate-900 transition">
+                  How It Works
                 </Link>
               </li>
               <li>
-                <Link to="/architecture" className="hover:text-slate-900 transition">
-                  Digital Architecture
+                <Link to="/onboarding" className="hover:text-slate-900 transition">
+                  Get Set Up
                 </Link>
               </li>
             </ul>
           </div>
           <div className="md:col-span-2">
             <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-4">
-              Industries
+              Built For
             </div>
             <ul className="space-y-2 text-sm text-slate-600">
-              <li>Roofing</li>
-              <li>HVAC</li>
-              <li>Plumbing</li>
-              <li>Med Spas</li>
+              <li>Residential roofers</li>
+              <li>Commercial roofing</li>
+              <li>Storm &amp; restoration</li>
+              <li>Repair &amp; service</li>
             </ul>
           </div>
           <div className="md:col-span-3">
@@ -265,7 +265,7 @@ function Footer() {
           </div>
         </div>
         <div className="pt-8 border-t border-slate-900/8 flex flex-col md:flex-row justify-between gap-4 font-mono text-[10px] uppercase tracking-[0.18em] text-slate-500">
-          <div>© 2026 Rainn's Enterprises, LLC · Nashville, TN · All rights reserved.</div>
+          <div>© 2026 Koemori · Nashville, TN · All rights reserved.</div>
           <div className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 bg-rain-500 rounded-full animate-pulse" />
             All systems operational

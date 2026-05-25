@@ -97,9 +97,9 @@ export default function ContactSection() {
                     required
                   />
                   <span>
-                    I agree to receive SMS messages from <strong>Raindrop AI</strong> (operated
-                    by Rainn's Enterprises) about my audit and service updates. Message and data
-                    rates may apply. Reply <strong>STOP</strong> to opt out or{" "}
+                    I agree to receive SMS messages from <strong>Koemori</strong> about my audit
+                    and service updates. Message and data rates may apply. Reply{" "}
+                    <strong>STOP</strong> to opt out or{" "}
                     <strong>HELP</strong> for help. Consent is not a condition of purchase.
                   </span>
                 </label>

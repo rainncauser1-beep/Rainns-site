@@ -14,7 +14,7 @@
 
 const { createClient } = require("@supabase/supabase-js");
 
-const DEFAULT_FROM = "Raindrop AI <onboarding@resend.dev>";
+const DEFAULT_FROM = "Koemori <onboarding@resend.dev>";
 
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {
@@ -161,7 +161,7 @@ async function sendLeadEmail(client, call, row) {
       ${transcriptSnippet}
 
       <p style="margin-top:32px; padding-top:20px; border-top:1px solid #e5e7eb; font-size:12px; color:#6b7280;">
-        Sent by Raindrop AI · Reply to this email if anything looks off
+        Sent by Koemori · Reply to this email if anything looks off
       </p>
     </div>
   `;

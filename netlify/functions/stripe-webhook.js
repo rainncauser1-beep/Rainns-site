@@ -9,7 +9,7 @@ const Stripe = require("stripe");
 const { createClient } = require("@supabase/supabase-js");
 
 const DEFAULT_OWNER_EMAIL = "rainn.causer1@gmail.com";
-const DEFAULT_FROM = "Raindrop AI <onboarding@resend.dev>";
+const DEFAULT_FROM = "Koemori <onboarding@resend.dev>";
 
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {
@@ -203,7 +203,7 @@ function sendWelcomeEmail(client) {
   const html = `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; max-width: 560px; margin: 0 auto; color: #0b1220; line-height: 1.55;">
       <p>Hi ${escapeHtml(name)},</p>
-      <p>Welcome to Raindrop AI — and thanks for trusting us with ${escapeHtml(businessName)}.</p>
+      <p>Welcome to Koemori — and thanks for trusting us with ${escapeHtml(businessName)}.</p>
       <p>Your custom AI receptionist is built and ready to start catching calls 24/7.</p>
       ${phoneBlock}
       <p><strong>What happens next:</strong></p>
@@ -219,13 +219,13 @@ function sendWelcomeEmail(client) {
       </div>
       <p>Any questions before then, just reply to this email.</p>
       <p>— Rainn<br>
-      <span style="color: #6b7280; font-size: 13px;">Raindrop AI · Nashville</span></p>
+      <span style="color: #6b7280; font-size: 13px;">Koemori · Nashville</span></p>
     </div>
   `;
 
   return sendEmail({
     to: client.owner_email,
-    subject: `Welcome to Raindrop AI — your AI is ready`,
+    subject: `Welcome to Koemori — your AI is ready`,
     html,
   });
 }

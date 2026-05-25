@@ -21,7 +21,7 @@ const features = [
   {
     icon: Phone,
     title: "24/7 inbound coverage",
-    body: "Picks up in under 2 rings regardless of time or day. Custom voice, custom persona, objection library tuned for your trade.",
+    body: "Picks up in under 2 rings regardless of time or day. Custom voice, custom persona, objection library tuned for roofing.",
   },
   {
     icon: MessageSquare,
@@ -170,9 +170,9 @@ export default function Automations() {
               variants={fadeUp}
               className="text-lg text-slate-600 leading-relaxed mb-10 max-w-lg"
             >
-              Our Nashville-native AI voice agent picks up every inbound call in under 2 rings,
-              qualifies the lead, books the appointment, and texts you the full transcript before
-              the caller hangs up.
+              Built for roofers. Koemori picks up every inbound call in under 2 rings, qualifies
+              the homeowner, books the estimate, and texts you the full lead before they hang up —
+              while you're still up on the last roof.
             </motion.p>
 
             <motion.div variants={fadeUp} className="flex flex-wrap gap-3 mb-10">
@@ -184,10 +184,10 @@ export default function Automations() {
                 Try it free — 5 calls
               </button>
               <a
-                href="#pricing"
+                href="#roi"
                 className="inline-flex items-center gap-2 bg-cream-50 border border-slate-900/10 text-slate-800 px-6 py-4 rounded-full hover:border-slate-900/30 transition"
               >
-                See pricing
+                See what you're missing
               </a>
             </motion.div>
 

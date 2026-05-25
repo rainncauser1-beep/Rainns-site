@@ -42,7 +42,7 @@ export default function Login() {
         <div className="flex items-center justify-center gap-2.5 mb-10">
           <RaindropMark size={32} />
           <span className="font-display text-2xl text-slate-900 tracking-tight">
-            Raindrop<span className="text-rain-500">.</span>
+            Koemori<span className="text-rain-500">.</span>
           </span>
         </div>
 
@@ -53,7 +53,7 @@ export default function Login() {
             </div>
             <div>
               <div className="font-display text-xl text-slate-900 tracking-tight">Admin access</div>
-              <div className="font-mono text-[10px] text-slate-500">Raindrop AI · Internal</div>
+              <div className="font-mono text-[10px] text-slate-500">Koemori · Internal</div>
             </div>
           </div>
 
@@ -95,7 +95,7 @@ export default function Login() {
         </div>
 
         <p className="text-center font-mono text-[10px] text-slate-500 mt-6 uppercase tracking-wider">
-          Restricted access · Rainn's Enterprises
+          Restricted access · Koemori
         </p>
       </motion.div>
     </div>

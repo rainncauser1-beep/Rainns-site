@@ -314,13 +314,13 @@ export default function Portal() {
             We don't see your account yet
           </h1>
           <p className="text-slate-600 leading-relaxed mb-8">
-            This portal is for active Raindrop AI clients. If you've signed up
+            This portal is for active Koemori clients. If you've signed up
             recently, your account may still be being provisioned. Reach out
             and we'll sort it out.
           </p>
           <div className="flex flex-col gap-2">
             <a
-              href="mailto:hello@raindrop.ai"
+              href="mailto:hello@koemori.ai"
               className="bg-slate-900 text-cream-100 px-5 py-3 rounded-full font-medium hover:bg-rain-700 transition"
             >
               Email us
@@ -348,7 +348,7 @@ export default function Portal() {
           <Link to="/" className="flex items-center gap-2.5">
             <RaindropMark size={26} />
             <span className="font-display text-xl text-slate-900 tracking-tight">
-              Raindrop<span className="text-rain-500">.</span>
+              Koemori<span className="text-rain-500">.</span>
             </span>
           </Link>
           <div className="flex items-center gap-3">
@@ -375,7 +375,7 @@ export default function Portal() {
           className="mb-8"
         >
           <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-rain-600 mb-2">
-            Your Raindrop dashboard
+            Your Koemori dashboard
           </div>
           <h1 className="font-display text-4xl md:text-5xl text-slate-900 tracking-tight leading-tight">
             Hey {client.owner_name?.split(" ")[0] || "there"}.
@@ -642,9 +642,9 @@ export default function Portal() {
         <ManageSubscription client={client} onChanged={(status) => setClient((c) => ({ ...c, payment_status: status }))} />
 
         <div className="mt-12 mb-6 text-center text-[12px] text-slate-500">
-          <Link to="/" className="hover:text-slate-900 transition">Back to raindrop.ai</Link>
+          <Link to="/" className="hover:text-slate-900 transition">Back to koemori.ai</Link>
           {" · "}
-          <a href="mailto:hello@raindrop.ai" className="hover:text-slate-900 transition">Get help</a>
+          <a href="mailto:hello@koemori.ai" className="hover:text-slate-900 transition">Get help</a>
         </div>
       </main>
     </div>

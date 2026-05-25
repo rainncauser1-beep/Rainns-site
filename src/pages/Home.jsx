@@ -21,44 +21,44 @@ const stagger = {
 
 const services = [
   {
-    id: "automations",
+    id: "answer",
     to: "/automations",
     eyebrow: "Active · Live Now",
-    title: "AI Automations",
-    tagline: "The Safety Net",
-    desc: "24/7 voice receptionists and workflow automation. Every call answered in under 3 seconds — day or night.",
+    title: "Answers Every Call",
+    tagline: "The Guard",
+    desc: "Storm season, on a roof, after hours — Koemori picks up in under 3 seconds and talks like a real person. No more voicemail, no more lost jobs.",
     icon: Sparkles,
     active: true,
-    stat: { v: "<3s", l: "Speed-to-lead" },
+    stat: { v: "<3s", l: "Pickup speed" },
   },
   {
-    id: "marketing",
-    to: "/marketing",
-    eyebrow: "Strategic Beta",
-    title: "Performance Marketing",
-    tagline: "The Growth Engine",
-    desc: "Database reactivation and AI-targeted campaigns. Turn your dead CRM into booked jobs within 48 hours.",
+    id: "capture",
+    to: "/get-started",
+    eyebrow: "Active · Live Now",
+    title: "Texts You the Lead",
+    tagline: "The Handoff",
+    desc: "The second a call ends, the homeowner's name, number, and what they need hit your phone. You call back warm — never cold, never too late.",
     icon: TrendingUp,
-    active: false,
-    stat: { v: "48h", l: "Avg. reactivation" },
+    active: true,
+    stat: { v: "Instant", l: "Lead handoff" },
   },
   {
-    id: "architecture",
-    to: "/architecture",
-    eyebrow: "Strategic Beta",
-    title: "Digital Architecture",
-    tagline: "The Foundation",
-    desc: "Conversion-built websites and AI-search visibility across ChatGPT, Perplexity, and Gemini.",
+    id: "book",
+    to: "/get-started",
+    eyebrow: "Active · Live Now",
+    title: "Books the Estimate",
+    tagline: "The Calendar",
+    desc: "Koemori offers your real availability and books the inspection right on your calendar — while you're still up on the last one.",
     icon: Globe,
-    active: false,
-    stat: { v: "3×", l: "Conversion lift" },
+    active: true,
+    stat: { v: "24/7", l: "On the clock" },
   },
 ];
 
 const whyStats = [
-  { icon: Clock, stat: "62%", body: "of calls to small businesses go unanswered. We answer 100%." },
-  { icon: Database, stat: "$50K+", body: "in dormant leads sitting in the average local CRM, unworked." },
-  { icon: ShieldCheck, stat: "10DLC", body: "compliant by default — every message deliverable, no carrier blocks." },
+  { icon: Clock, stat: "62%", body: "of calls to roofers go unanswered. Koemori answers 100% — day, night, and through every storm." },
+  { icon: Database, stat: "$8,500", body: "is the average roofing job. Miss two calls a month and that's six figures a year walking next door." },
+  { icon: ShieldCheck, stat: "10DLC", body: "compliant by default — every lead text deliverable, no carrier blocks." },
 ];
 
 export default function Home() {
@@ -82,26 +82,34 @@ export default function Home() {
             className="inline-flex items-center gap-2 mb-8 px-3.5 py-1.5 bg-cream-50 border border-slate-900/10 rounded-full text-[11px] uppercase tracking-[0.18em] text-slate-600"
           >
             <span className="w-1.5 h-1.5 bg-rain-500 rounded-full animate-pulse" />
-            <MapPin className="w-3 h-3" /> Nashville · 615 / 629 · AI Systems Online
+            <MapPin className="w-3 h-3" /> Built for roofers · Nashville · On the line 24/7
           </motion.div>
 
           <motion.h1
             variants={fadeUp}
             className="font-display text-[clamp(3rem,7.5vw,6.5rem)] leading-[0.95] tracking-[-0.02em] text-slate-900 text-balance mb-6 max-w-4xl"
           >
-            The agency that runs
+            Answers every call
             <br />
             while you're on
             <br />
-            <span className="italic text-rain-700">the job.</span>
+            <span className="italic text-rain-700">the roof.</span>
           </motion.h1>
 
           <motion.p
             variants={fadeUp}
-            className="text-lg md:text-xl text-slate-600 max-w-xl leading-relaxed mb-10"
+            className="text-lg md:text-xl text-slate-600 max-w-xl leading-relaxed mb-6"
           >
-            Raindrop AI deploys voice agents, performance campaigns, and conversion architecture
-            for local service brands. One system. Every lead captured.
+            Koemori is the AI receptionist built for roofing companies. It answers every call in
+            under 3 seconds, texts you the lead, and books the estimate — so you never lose a job
+            to a missed phone again.
+          </motion.p>
+
+          <motion.p
+            variants={fadeUp}
+            className="font-mono text-[11px] uppercase tracking-[0.18em] text-slate-500 mb-10"
+          >
+            Koemori · 声 + 守り · "the voice that guards"
           </motion.p>
 
           <motion.div variants={fadeUp} className="flex flex-wrap gap-3">
@@ -164,7 +172,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Why Raindrop */}
+      {/* Why Koemori */}
       <section className="px-6 py-24 bg-cream-50 border-y border-slate-900/5">
         <div className="max-w-7xl mx-auto">
           <motion.div
@@ -175,10 +183,10 @@ export default function Home() {
             className="mb-12"
           >
             <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-rain-600 mb-4">
-              Why Raindrop
+              Why Koemori
             </div>
             <h2 className="font-display text-4xl md:text-5xl text-slate-900 tracking-tight leading-tight text-balance max-w-xl">
-              Built for operators. <span className="italic text-rain-700">Not for demos.</span>
+              Built for roofers. <span className="italic text-rain-700">Not for demos.</span>
             </h2>
           </motion.div>
 

@@ -11,8 +11,8 @@ const EASE = [0.22, 1, 0.36, 1];
 const CAL_LINK = "https://cal.com/rainn/15-min-meeting";
 
 const INDUSTRIES = [
-  "Roofing", "HVAC", "Plumbing", "Electrical", "Med Spa",
-  "Auto Detailing", "Landscaping", "Pest Control", "Locksmith", "Other",
+  "Residential roofing", "Commercial roofing", "Storm & restoration",
+  "Repair & maintenance", "Mixed / full-service",
 ];
 
 const inputCls =
@@ -191,7 +191,7 @@ export default function Onboarding() {
                   <Field label="Business name *">
                     <input className={inputCls} value={form.business_name} onChange={set("business_name")} placeholder="Apex Roofing" autoFocus />
                   </Field>
-                  <Field label="Industry">
+                  <Field label="Roofing focus">
                     <select className={inputCls} value={form.industry} onChange={set("industry")}>
                       <option value="">Select…</option>
                       {INDUSTRIES.map((i) => <option key={i} value={i}>{i}</option>)}

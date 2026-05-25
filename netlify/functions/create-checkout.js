@@ -68,7 +68,7 @@ exports.handler = async (event) => {
   }
 
   const appUrl = process.env.URL || "https://rainndropai.netlify.app";
-  const businessLabel = client_name || "Raindrop AI Client";
+  const businessLabel = client_name || "Koemori Client";
 
   try {
     const stripe = Stripe(stripeKey);
@@ -80,7 +80,7 @@ exports.handler = async (event) => {
       {
         price_data: {
           currency: "usd",
-          product_data: { name: `Raindrop AI — Monthly Service (${businessLabel})` },
+          product_data: { name: `Koemori — Monthly Service (${businessLabel})` },
           unit_amount: Math.round(monthlyDollars * 100),
           recurring: { interval: "month" },
         },
@@ -91,7 +91,7 @@ exports.handler = async (event) => {
       lineItems.push({
         price_data: {
           currency: "usd",
-          product_data: { name: `Raindrop AI — Setup & Onboarding (${businessLabel})` },
+          product_data: { name: `Koemori — Setup & Onboarding (${businessLabel})` },
           unit_amount: Math.round(setupDollars * 100),
         },
         quantity: 1,

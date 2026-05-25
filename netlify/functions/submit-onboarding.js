@@ -15,7 +15,7 @@
 const { createClient } = require("@supabase/supabase-js");
 
 const DEFAULT_OWNER_EMAIL = "rainn.causer1@gmail.com";
-const DEFAULT_FROM = "Raindrop AI <onboarding@resend.dev>";
+const DEFAULT_FROM = "Koemori <onboarding@resend.dev>";
 
 // Only these fields are accepted from the public form
 const ALLOWED = new Set([

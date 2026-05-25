@@ -57,7 +57,7 @@ export default function PortalLogin() {
         <div className="flex items-center justify-center gap-2.5 mb-10">
           <RaindropMark size={32} />
           <span className="font-display text-2xl text-slate-900 tracking-tight">
-            Raindrop<span className="text-rain-500">.</span>
+            Koemori<span className="text-rain-500">.</span>
           </span>
         </div>
 

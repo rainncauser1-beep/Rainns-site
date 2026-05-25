@@ -4,13 +4,8 @@ import { TrendingUp, Phone, DollarSign } from "lucide-react";
 
 const EASE = [0.22, 1, 0.36, 1];
 
-// Sensible per-industry defaults so the number feels real out of the gate
-const PRESETS = [
-  { id: "roofing",  label: "Roofing",  callsPerWeek: 12, missedPct: 50, avgJob: 8500 },
-  { id: "hvac",     label: "HVAC",     callsPerWeek: 35, missedPct: 50, avgJob: 1200 },
-  { id: "plumbing", label: "Plumbing", callsPerWeek: 30, missedPct: 50, avgJob: 750  },
-  { id: "medspa",   label: "Med Spa",  callsPerWeek: 25, missedPct: 45, avgJob: 600  },
-];
+// Roofing defaults so the number feels real out of the gate
+const ROOFING = { callsPerWeek: 12, missedPct: 50, avgJob: 8500 };
 
 // Conservative assumption: of the missed calls we now answer, this share
 // become booked jobs. Kept deliberately low — most missed calls are spam,
@@ -70,22 +65,12 @@ function Slider({ label, value, min, max, step, onChange, format }) {
 }
 
 export default function RoiCalculator() {
-  const [preset, setPreset] = useState("roofing");
-  const [callsPerWeek, setCallsPerWeek] = useState(12);
-  const [missedPct, setMissedPct] = useState(50);
-  const [avgJob, setAvgJob] = useState(8500);
+  const [callsPerWeek, setCallsPerWeek] = useState(ROOFING.callsPerWeek);
+  const [missedPct, setMissedPct] = useState(ROOFING.missedPct);
+  const [avgJob, setAvgJob] = useState(ROOFING.avgJob);
 
   const sectionRef = useRef(null);
   const inView = useInView(sectionRef, { once: true, margin: "-80px" });
-
-  const applyPreset = (p) => {
-    const found = PRESETS.find((x) => x.id === p);
-    if (!found) return;
-    setPreset(p);
-    setCallsPerWeek(found.callsPerWeek);
-    setMissedPct(found.missedPct);
-    setAvgJob(found.avgJob);
-  };
 
   const { lostPerYear, recoveredPerYear, jobsRecovered } = useMemo(() => {
     const missedPerWeek = callsPerWeek * (missedPct / 100);
@@ -121,8 +106,9 @@ export default function RoiCalculator() {
             See what answering the phone is <span className="italic text-rain-700">actually worth.</span>
           </h2>
           <p className="text-slate-600 mt-4 text-[15px] leading-relaxed">
-            Most local businesses miss over half their inbound calls. Drag the
-            sliders to your numbers and watch what's walking out the door.
+            Most roofers miss over half their inbound calls — storm season, on a
+            roof, after hours. Drag the sliders to your numbers and watch what's
+            walking out the door.
           </p>
         </motion.div>
 
@@ -134,20 +120,8 @@ export default function RoiCalculator() {
             transition={{ duration: 0.6, ease: EASE, delay: 0.05 }}
             className="bg-cream-100 border border-slate-900/8 rounded-3xl p-8"
           >
-            <div className="flex flex-wrap gap-1.5 mb-8">
-              {PRESETS.map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => applyPreset(p.id)}
-                  className={`px-3.5 py-1.5 rounded-full text-[12px] font-medium transition ${
-                    preset === p.id
-                      ? "bg-slate-900 text-cream-100"
-                      : "bg-cream-50 border border-slate-900/8 text-slate-600 hover:border-slate-900/20"
-                  }`}
-                >
-                  {p.label}
-                </button>
-              ))}
+            <div className="inline-flex items-center gap-1.5 mb-8 px-3 py-1.5 rounded-full bg-slate-900 text-cream-100 text-[12px] font-medium">
+              Roofing
             </div>
 
             <div className="space-y-7">
@@ -157,7 +131,7 @@ export default function RoiCalculator() {
                 min={5}
                 max={120}
                 step={1}
-                onChange={(v) => { setCallsPerWeek(v); setPreset("custom"); }}
+                onChange={setCallsPerWeek}
               />
               <Slider
                 label="% you miss or can't get to"
@@ -165,16 +139,16 @@ export default function RoiCalculator() {
                 min={5}
                 max={90}
                 step={5}
-                onChange={(v) => { setMissedPct(v); setPreset("custom"); }}
+                onChange={setMissedPct}
                 format={(v) => `${v}%`}
               />
               <Slider
                 label="Average job value"
                 value={avgJob}
-                min={100}
-                max={20000}
-                step={50}
-                onChange={(v) => { setAvgJob(v); setPreset("custom"); }}
+                min={500}
+                max={30000}
+                step={100}
+                onChange={setAvgJob}
                 format={(v) => `$${v.toLocaleString()}`}
               />
             </div>
@@ -219,14 +193,14 @@ export default function RoiCalculator() {
                     <AnimatedNumber value={recoveredPerYear} prefix="$" />
                   </div>
                   <div className="font-mono text-[10px] uppercase tracking-wider text-cream-100/50">
-                    Raindrop recovers
+                    Koemori recovers
                   </div>
                 </div>
               </div>
 
               <p className="text-cream-100/60 text-[13px] leading-relaxed">
-                Raindrop answers 100% of them — 24/7, in under 3 seconds. Even
-                catching a fraction pays for the service many times over.
+                Koemori answers 100% of them — 24/7, in under 3 seconds. Even
+                catching a fraction pays for itself many times over.
               </p>
             </div>
           </motion.div>
