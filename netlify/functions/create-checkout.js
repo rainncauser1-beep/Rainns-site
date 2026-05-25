@@ -67,7 +67,7 @@ exports.handler = async (event) => {
     return { statusCode: 500, body: JSON.stringify({ error: "STRIPE_SECRET_KEY not configured" }) };
   }
 
-  const appUrl = process.env.URL || "https://rainndropai.netlify.app";
+  const appUrl = process.env.URL || "https://koemori.ai";
   const businessLabel = client_name || "Koemori Client";
 
   try {

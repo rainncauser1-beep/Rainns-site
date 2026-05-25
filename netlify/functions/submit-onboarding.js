@@ -15,7 +15,7 @@
 const { createClient } = require("@supabase/supabase-js");
 
 const DEFAULT_OWNER_EMAIL = "rainn.causer1@gmail.com";
-const DEFAULT_FROM = "Koemori <onboarding@resend.dev>";
+const DEFAULT_FROM = "Koemori <hello@koemori.ai>";
 
 // Only these fields are accepted from the public form
 const ALLOWED = new Set([
@@ -108,7 +108,7 @@ async function notifyOwner(record) {
         ${row("Brand voice", record.brand_voice_notes)}
         ${row("CRM", record.crm)}
       </table>
-      <p><a href="https://rainndropai.netlify.app/admin" style="color:#15325a; font-weight:600;">Open in admin →</a></p>
+      <p><a href="https://koemori.ai/admin" style="color:#15325a; font-weight:600;">Open in admin →</a></p>
     </div>
   `;
 

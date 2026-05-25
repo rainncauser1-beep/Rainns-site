@@ -14,7 +14,7 @@
 
 const { createClient } = require("@supabase/supabase-js");
 
-const DEFAULT_FROM = "Koemori <onboarding@resend.dev>";
+const DEFAULT_FROM = "Koemori <hello@koemori.ai>";
 
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {

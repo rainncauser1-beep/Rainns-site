@@ -9,7 +9,7 @@ const Stripe = require("stripe");
 const { createClient } = require("@supabase/supabase-js");
 
 const DEFAULT_OWNER_EMAIL = "rainn.causer1@gmail.com";
-const DEFAULT_FROM = "Koemori <onboarding@resend.dev>";
+const DEFAULT_FROM = "Koemori <hello@koemori.ai>";
 
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {
@@ -215,7 +215,7 @@ function sendWelcomeEmail(client) {
       <div style="margin: 28px 0; padding: 18px 20px; background: #15325a; border-radius: 10px; text-align: center;">
         <p style="margin: 0 0 4px; color: #cfe0f5; font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em;">Your portal</p>
         <p style="margin: 0 0 10px; color: #fff; font-size: 14px;">View calls, transcripts, and toggle the AI on/off</p>
-        <a href="https://rainndropai.netlify.app/portal/login" style="display: inline-block; background: #fff; color: #15325a; padding: 10px 22px; border-radius: 9999px; font-weight: 600; font-size: 14px; text-decoration: none;">Sign in to portal →</a>
+        <a href="https://koemori.ai/portal/login" style="display: inline-block; background: #fff; color: #15325a; padding: 10px 22px; border-radius: 9999px; font-weight: 600; font-size: 14px; text-decoration: none;">Sign in to portal →</a>
       </div>
       <p>Any questions before then, just reply to this email.</p>
       <p>— Rainn<br>
@@ -257,7 +257,7 @@ function sendOwnerNotification(client, setup_amount, monthly_amount) {
         <li>Confirm forwarding works on their end</li>
         <li>Confirm SMS handoff works on their phone</li>
       </ul>
-      <p><a href="https://rainndropai.netlify.app/admin" style="color: #15325a; font-weight: 600;">Open in admin →</a></p>
+      <p><a href="https://koemori.ai/admin" style="color: #15325a; font-weight: 600;">Open in admin →</a></p>
     </div>
   `;
 
