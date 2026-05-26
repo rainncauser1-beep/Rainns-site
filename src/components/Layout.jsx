@@ -247,19 +247,24 @@ function Footer() {
             </div>
             <ul className="space-y-2 text-sm text-slate-600">
               <li>
-                <a href="#legal" className="hover:text-slate-900 transition">
+                <Link to="/terms" className="hover:text-slate-900 transition">
+                  Terms of Service
+                </Link>
+              </li>
+              <li>
+                <Link to="/privacy" className="hover:text-slate-900 transition">
                   Privacy Policy
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#legal" className="hover:text-slate-900 transition">
+                <Link to="/privacy#sms" className="hover:text-slate-900 transition">
                   SMS / 10DLC Disclosure
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#legal" className="hover:text-slate-900 transition">
+                <Link to="/privacy#do-not-sell" className="hover:text-slate-900 transition">
                   Do Not Sell My Info
-                </a>
+                </Link>
               </li>
             </ul>
           </div>

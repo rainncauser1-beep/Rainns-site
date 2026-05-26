@@ -10,6 +10,8 @@ import Marketing from "./pages/Marketing";
 import Architecture from "./pages/Architecture";
 import GetStarted from "./pages/GetStarted";
 import Onboarding from "./pages/Onboarding";
+import Terms from "./pages/Terms";
+import Privacy from "./pages/Privacy";
 import Login from "./pages/Login";
 import Admin from "./pages/Admin";
 import Portal from "./pages/Portal";
@@ -64,6 +66,10 @@ function AnimatedRoutes() {
 
         {/* Onboarding wizard — standalone, full-screen (no nav/footer) */}
         <Route path="/onboarding" element={<Onboarding />} />
+
+        {/* Legal */}
+        <Route path="/terms" element={<Layout><Terms /></Layout>} />
+        <Route path="/privacy" element={<Layout><Privacy /></Layout>} />
 
         {/* Auth — no shared Layout (full-screen login) */}
         <Route path="/login" element={<Login />} />
