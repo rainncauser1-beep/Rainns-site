@@ -136,7 +136,7 @@ export default function ClientDrawer({ open, client, onClose, onSaved }) {
       if (data.phone_number) {
         setProvisionMsg(`Agent ${data.agent_id} · Number ${data.phone_number}`);
       } else if (data.phone_error) {
-        setProvisionMsg(`Agent created · Phone failed: ${data.phone_error.slice(0, 80)}`);
+        setProvisionMsg(`Agent created ✓ — but phone number failed: ${data.phone_error}`);
       } else {
         setProvisionMsg(`Agent created: ${data.agent_id}`);
       }
@@ -368,12 +368,20 @@ export default function ClientDrawer({ open, client, onClose, onSaved }) {
                     </button>
                   </div>
                   {provisionMsg && (
-                    <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-800 text-[12px] rounded-lg px-3 py-2">
-                      <Check className="w-3.5 h-3.5 flex-shrink-0" />
-                      <span className="font-mono truncate">{provisionMsg}</span>
-                      <button onClick={copyAgentId} className="ml-auto flex-shrink-0 hover:text-emerald-900 transition">
-                        {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                      </button>
+                    <div className={`flex items-start gap-2 text-[12px] rounded-lg px-3 py-2 ${
+                      provisionMsg.includes("failed")
+                        ? "bg-amber-50 border border-amber-200 text-amber-900"
+                        : "bg-emerald-50 border border-emerald-200 text-emerald-800"
+                    }`}>
+                      {provisionMsg.includes("failed")
+                        ? <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                        : <Check className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />}
+                      <span className="font-mono break-words flex-1">{provisionMsg}</span>
+                      {!provisionMsg.includes("failed") && (
+                        <button onClick={copyAgentId} className="flex-shrink-0 hover:text-emerald-900 transition">
+                          {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
