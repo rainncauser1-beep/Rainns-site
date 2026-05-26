@@ -112,6 +112,11 @@ exports.handler = async (event) => {
       ...(client_email ? { customer_email: client_email } : {}),
       line_items: lineItems,
       subscription_data: subscriptionData,
+      // Require the client to accept our Terms of Service before paying.
+      // Stripe records the acceptance (with timestamp) on the session.
+      // NOTE: this requires a Terms-of-service URL set in the Stripe Dashboard
+      // (Settings → Public business details / Checkout) or the API will error.
+      consent_collection: { terms_of_service: "required" },
       metadata: {
         client_id,
         client_name: businessLabel,
