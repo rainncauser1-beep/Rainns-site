@@ -220,6 +220,12 @@ function sendWelcomeEmail(client) {
       <p>Any questions before then, just reply to this email.</p>
       <p>— Rainn<br>
       <span style="color: #6b7280; font-size: 13px;">Koemori · Nashville</span></p>
+      <p style="margin-top:20px; padding-top:16px; border-top:1px solid #e5e7eb; font-size:12px; color:#6b7280; line-height:1.6;">
+        By forwarding your number and going live with Koemori, you agree to our
+        <a href="https://koemori.ai/terms" style="color:#15325a;">Terms of Service</a> and
+        <a href="https://koemori.ai/privacy" style="color:#15325a;">Privacy Policy</a> — including
+        that calls to your line are answered, recorded, and transcribed to capture your leads.
+      </p>
     </div>
   `;
 
