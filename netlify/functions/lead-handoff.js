@@ -48,7 +48,7 @@ exports.handler = async (event) => {
   // Look up the client this agent belongs to
   const { data: client, error: clientErr } = await supabase
     .from("clients")
-    .select("id, business_name, owner_name, owner_email, retell_phone_number")
+    .select("id, business_name, owner_name, owner_email, owner_phone, retell_phone_number")
     .eq("retell_agent_id", call.agent_id)
     .maybeSingle();
 
@@ -90,14 +90,18 @@ exports.handler = async (event) => {
     if (insertErr) console.error("call_logs insert error:", insertErr.message);
   }
 
-  // Only send lead email on the analyzed event (has summary). For call_ended
-  // without analysis we just save the row and wait for the analyzed event.
-  if (eventType === "call_analyzed" && client.owner_email) {
-    try {
-      await sendLeadEmail(client, call, row);
-    } catch (e) {
-      console.error("Lead email failed:", e.message);
+  // Only alert on the analyzed event (has summary). For call_ended without
+  // analysis we just save the row and wait for the analyzed event.
+  // Email + SMS both fire best-effort; one failing never blocks the other.
+  if (eventType === "call_analyzed") {
+    const alerts = [];
+    if (client.owner_email) {
+      alerts.push(sendLeadEmail(client, call, row).catch((e) => console.error("Lead email failed:", e.message)));
     }
+    if (client.owner_phone) {
+      alerts.push(sendLeadSMS(client, call, row).catch((e) => console.error("Lead SMS failed:", e.message)));
+    }
+    await Promise.all(alerts);
   }
 
   return ok({ received: true, client_id: client.id });
@@ -184,6 +188,63 @@ async function sendLeadEmail(client, call, row) {
     const errText = await res.text();
     console.error("Resend send error:", res.status, errText);
   }
+}
+
+// ---------------------------------------------------------------------------
+// SMS (Twilio). No-ops cleanly if Twilio env vars are unset.
+// One Twilio number (TWILIO_FROM_NUMBER) texts every client their own leads.
+// ---------------------------------------------------------------------------
+
+async function sendLeadSMS(client, call, row) {
+  const sid = process.env.TWILIO_ACCOUNT_SID;
+  const token = process.env.TWILIO_AUTH_TOKEN;
+  const from = process.env.TWILIO_FROM_NUMBER;
+  if (!sid || !token || !from) {
+    console.log("Twilio env vars not set — skipping lead SMS");
+    return;
+  }
+
+  const to = toE164(client.owner_phone);
+  if (!to) {
+    console.log("Client owner_phone not a valid US number — skipping SMS");
+    return;
+  }
+
+  const caller = call.from_number || "Unknown";
+  const businessName = client.business_name || "your business";
+  const summary = row.summary ? ` — ${row.summary}` : "";
+  // Keep it short; SMS bills per ~160-char segment
+  let body = `New ${businessName} lead from ${caller}${summary} Call them back: ${caller}`;
+  if (body.length > 320) body = body.slice(0, 317) + "…";
+
+  const params = new URLSearchParams({ From: from, To: to, Body: body });
+
+  const res = await fetch(
+    `https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: "Basic " + Buffer.from(`${sid}:${token}`).toString("base64"),
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: params.toString(),
+    }
+  );
+
+  if (!res.ok) {
+    const errText = await res.text();
+    console.error("Twilio send error:", res.status, errText);
+  }
+}
+
+// Normalize a US phone to E.164 (+1XXXXXXXXXX). Returns null if unusable.
+function toE164(phoneStr) {
+  if (!phoneStr) return null;
+  const d = String(phoneStr).replace(/\D/g, "");
+  if (d.length === 10) return `+1${d}`;
+  if (d.length === 11 && d.startsWith("1")) return `+${d}`;
+  if (String(phoneStr).trim().startsWith("+")) return String(phoneStr).trim();
+  return null;
 }
 
 function sentimentColor(s) {
