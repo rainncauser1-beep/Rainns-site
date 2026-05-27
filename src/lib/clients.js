@@ -45,6 +45,8 @@ export function emptyClient() {
     crm: "",
     retell_agent_id: "",
     retell_phone_number: "",
+    cal_event_type_id: "",
+    cal_timezone: "America/Chicago",
     zapier_webhook_url: "",
     status: "lead",
     notes: "",

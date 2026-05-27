@@ -11,7 +11,7 @@
 
 const ADMIN_EMAIL = "rainn.causer1@gmail.com";
 
-function buildPrompt(c, websiteContext) {
+function buildPrompt(c, websiteContext, bookingEnabled) {
   const name = c.agent_display_name || "the AI receptionist";
   const lines = [];
   lines.push(`You are ${name} for ${c.business_name}, a roofing company. You answer the phone like a sharp, warm, capable front-office person.`);
@@ -46,12 +46,24 @@ function buildPrompt(c, websiteContext) {
   lines.push("- Is it an insurance or storm claim?");
   lines.push("- How urgent it is (an active leak is urgent)");
   lines.push("");
-  lines.push("# BOOKING — READ CAREFULLY");
-  lines.push("You do NOT have live access to the calendar, so you must NEVER promise, confirm, or 'lock in' a specific appointment time, and never tell two callers the same slot is reserved.");
-  lines.push("Instead: ask what generally works for them (mornings vs afternoons, which days), capture that preference, and tell them the team will confirm the exact time by text or call shortly.");
-  lines.push('Example: "Perfect — I\'ve got your details and that mornings this week work best. The team will text you shortly to lock in the exact time. Sound good?"');
-  lines.push("You are collecting a request, not committing the schedule.");
-  lines.push("");
+  if (bookingEnabled) {
+    lines.push("# BOOKING — YOU CAN BOOK REAL APPOINTMENTS");
+    lines.push("You have a tool called `manage_booking` connected to the live calendar. Use it to book a real estimate:");
+    lines.push("1. When the caller is ready to schedule, ask what day works. Call `manage_booking` with action=\"check_availability\" and that date.");
+    lines.push("2. The tool returns real open times. Offer the caller 2-3 of them in plain language.");
+    lines.push("3. When they pick one, call `manage_booking` with action=\"book\", the exact start_time it gave you (ISO 8601), the caller_name, caller_phone, and caller_email if you have it.");
+    lines.push("4. Only confirm the appointment AFTER the tool says it booked. Read back the day and time.");
+    lines.push("Never invent a time or say 'booked' before the tool confirms it. If the tool says a slot was taken, offer another.");
+    lines.push("Always still capture name + callback number even if they don't book.");
+    lines.push("");
+  } else {
+    lines.push("# BOOKING — READ CAREFULLY");
+    lines.push("You do NOT have live access to the calendar, so you must NEVER promise, confirm, or 'lock in' a specific appointment time, and never tell two callers the same slot is reserved.");
+    lines.push("Instead: ask what generally works for them (mornings vs afternoons, which days), capture that preference, and tell them the team will confirm the exact time by text or call shortly.");
+    lines.push('Example: "Perfect — I\'ve got your details and that mornings this week work best. The team will text you shortly to lock in the exact time. Sound good?"');
+    lines.push("You are collecting a request, not committing the schedule.");
+    lines.push("");
+  }
   if (c.top_objections) {
     lines.push("# COMMON OBJECTIONS & HOW TO HANDLE");
     lines.push(c.top_objections);
@@ -158,7 +170,37 @@ exports.handler = async (event) => {
 
   // Pull website context (best-effort) and build the prompt
   const websiteContext = await fetchWebsiteContext(body.website);
-  const generalPrompt = buildPrompt(body, websiteContext);
+  const bookingEnabled = Boolean(body.cal_event_type_id);
+  const generalPrompt = buildPrompt(body, websiteContext, bookingEnabled);
+
+  // When booking is enabled, give the LLM a tool to check availability + book
+  const siteUrlForTool = process.env.URL || "https://koemori.ai";
+  const generalTools = bookingEnabled
+    ? [
+        {
+          type: "custom",
+          name: "manage_booking",
+          description:
+            "Check real calendar availability and book an estimate appointment. Use action='check_availability' with a date to get open times, then action='book' with the chosen ISO start_time to book it.",
+          url: `${siteUrlForTool}/.netlify/functions/book-appointment`,
+          speak_during_execution: true,
+          speak_after_execution: true,
+          execution_message_description: "Let me check the calendar real quick…",
+          parameters: {
+            type: "object",
+            properties: {
+              action: { type: "string", enum: ["check_availability", "book"], description: "check_availability to list open times, book to reserve one" },
+              date: { type: "string", description: "Date to check availability for, in YYYY-MM-DD" },
+              start_time: { type: "string", description: "Exact ISO 8601 start time to book (from the open times returned)" },
+              caller_name: { type: "string", description: "Caller's full name" },
+              caller_phone: { type: "string", description: "Caller's callback number" },
+              caller_email: { type: "string", description: "Caller's email if provided" },
+            },
+            required: ["action"],
+          },
+        },
+      ]
+    : undefined;
 
   // ============================================================
   // UPDATE PATH — client already has an agent: refresh its prompt
@@ -182,7 +224,12 @@ exports.handler = async (event) => {
       const updRes = await fetch(`https://api.retellai.com/update-retell-llm/${llmId}`, {
         method: "PATCH",
         headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ general_prompt: generalPrompt, begin_message: beginMessage }),
+        body: JSON.stringify({
+          general_prompt: generalPrompt,
+          begin_message: beginMessage,
+          // Always send tools (empty array clears them if booking was turned off)
+          general_tools: generalTools || [],
+        }),
       });
       if (!updRes.ok) {
         const errText = await updRes.text();
@@ -217,6 +264,7 @@ exports.handler = async (event) => {
         model: "gpt-4o-mini",
         model_temperature: 0.3,
         begin_message: beginMessage,
+        ...(generalTools ? { general_tools: generalTools } : {}),
       }),
     });
     if (!llmRes.ok) {

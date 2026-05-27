@@ -120,6 +120,8 @@ export default function ClientDrawer({ open, client, onClose, onSaved }) {
           services: form.services,
           top_objections: form.top_objections,
           brand_voice_notes: form.brand_voice_notes,
+          // If present, the AI gets a live booking tool for this client's calendar
+          cal_event_type_id: form.cal_event_type_id || undefined,
           // If present, the function UPDATES this agent's prompt instead of creating a new one
           retell_agent_id: form.retell_agent_id || undefined,
         }),
@@ -399,6 +401,12 @@ export default function ClientDrawer({ open, client, onClose, onSaved }) {
                   </Field>
                   <Field label="Retell phone number" full hint="The AI's number — calls forward here. Auto-fills on Provision, or paste a manually-bought number.">
                     <input className={inputCls} value={form.retell_phone_number} onChange={update("retell_phone_number")} placeholder="+1 (615) 555-..." />
+                  </Field>
+                  <Field label="Cal.com event type ID" hint="Set this + re-provision to let the AI book real appointments. Leave blank for capture-only.">
+                    <input className={inputCls + " font-mono text-[12px]"} value={form.cal_event_type_id} onChange={update("cal_event_type_id")} placeholder="e.g. 1234567" />
+                  </Field>
+                  <Field label="Calendar timezone" hint="For booking times">
+                    <input className={inputCls} value={form.cal_timezone} onChange={update("cal_timezone")} placeholder="America/Chicago" />
                   </Field>
                 </div>
               </Section>
