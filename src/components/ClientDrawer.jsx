@@ -390,11 +390,8 @@ export default function ClientDrawer({ open, client, onClose, onSaved }) {
                   <Field label="Retell agent ID" full>
                     <input className={inputCls + " font-mono text-[12px]"} value={form.retell_agent_id} onChange={update("retell_agent_id")} placeholder="agent_xxxxxxxxxxxx" />
                   </Field>
-                  <Field label="Retell phone number" full>
+                  <Field label="Retell phone number" full hint="The AI's number — calls forward here. Auto-fills on Provision, or paste a manually-bought number.">
                     <input className={inputCls} value={form.retell_phone_number} onChange={update("retell_phone_number")} placeholder="+1 (615) 555-..." />
-                  </Field>
-                  <Field label="Zapier webhook URL" full hint="For SMS lead notifications">
-                    <input className={inputCls + " font-mono text-[12px]"} value={form.zapier_webhook_url} onChange={update("zapier_webhook_url")} placeholder="https://hooks.zapier.com/..." />
                   </Field>
                 </div>
               </Section>

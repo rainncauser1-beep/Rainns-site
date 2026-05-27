@@ -23,7 +23,7 @@ export const CHECKLIST_STEPS = [
   { key: "step_agent_built", label: "Retell agent built & customized" },
   { key: "step_tested", label: "Test calls successful" },
   { key: "step_number_forwarded", label: "Customer's number forwarded" },
-  { key: "step_sms_zap_live", label: "SMS notification Zap live" },
+  { key: "step_sms_zap_live", label: "Lead alerts confirmed (email + SMS)" },
   { key: "step_calendar_synced", label: "Calendar integration tested" },
   { key: "step_client_trained", label: "Client trained on what to expect" },
   { key: "step_marked_live", label: "Marked live & monitoring" },
