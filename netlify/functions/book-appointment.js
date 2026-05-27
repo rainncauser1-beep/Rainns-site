@@ -17,6 +17,53 @@ const CAL_API_VERSION_SLOTS = "2024-09-04";
 const CAL_API_VERSION_BOOKINGS = "2024-08-13";
 
 exports.handler = async (event) => {
+  // --- TEMPORARY DIAGNOSTIC (remove after calibration) ---
+  // GET ?diag_user=rainn&slug=...  -> finds the event type id, then tries
+  // several slot API variants and returns the raw responses so we can see
+  // exactly what Cal.com returns.
+  if (event.httpMethod === "GET" && event.queryStringParameters?.diag_user) {
+    const calKey = process.env.CALCOM_API_KEY;
+    if (!calKey) return { statusCode: 200, body: JSON.stringify({ error: "CALCOM_API_KEY not set" }) };
+    const username = event.queryStringParameters.diag_user;
+    const wantSlug = event.queryStringParameters.slug || "";
+    const out = { eventTypes: null, matchedId: null, slotAttempts: [] };
+    try {
+      const etRes = await fetch(`${CAL_BASE}/event-types?username=${encodeURIComponent(username)}`, {
+        headers: { Authorization: `Bearer ${calKey}`, "cal-api-version": "2024-06-14" },
+      });
+      const etText = await etRes.text();
+      let etJson = {};
+      try { etJson = JSON.parse(etText); } catch {}
+      const list = etJson?.data || etJson?.event_types || [];
+      out.eventTypes = Array.isArray(list) ? list.map((e) => ({ id: e.id, slug: e.slug, title: e.title })) : etText.slice(0, 400);
+      const match = Array.isArray(list) ? list.find((e) => e.slug === wantSlug) || list[0] : null;
+      out.matchedId = match?.id || null;
+
+      if (out.matchedId) {
+        const start = new Date().toISOString().slice(0, 10);
+        const end = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+        const variants = [
+          { label: "v2024-09-04 /slots start&end", v: "2024-09-04", url: `${CAL_BASE}/slots?eventTypeId=${out.matchedId}&start=${start}&end=${end}&timeZone=America/Chicago` },
+          { label: "v2024-09-04 /slots startTime&endTime", v: "2024-09-04", url: `${CAL_BASE}/slots?eventTypeId=${out.matchedId}&startTime=${start}&endTime=${end}&timeZone=America/Chicago` },
+          { label: "v2024-08-13 /slots/available", v: "2024-08-13", url: `${CAL_BASE}/slots/available?eventTypeId=${out.matchedId}&startTime=${start}T00:00:00Z&endTime=${end}T00:00:00Z` },
+        ];
+        for (const a of variants) {
+          try {
+            const r = await fetch(a.url, { headers: { Authorization: `Bearer ${calKey}`, "cal-api-version": a.v } });
+            const t = await r.text();
+            out.slotAttempts.push({ label: a.label, status: r.status, body: t.slice(0, 700) });
+          } catch (e) {
+            out.slotAttempts.push({ label: a.label, error: e.message });
+          }
+        }
+      }
+    } catch (e) {
+      out.error = e.message;
+    }
+    return { statusCode: 200, headers: { "Content-Type": "application/json" }, body: JSON.stringify(out, null, 2) };
+  }
+  // --- END DIAGNOSTIC ---
+
   if (event.httpMethod !== "POST") {
     return reply("This endpoint only accepts POST.");
   }
