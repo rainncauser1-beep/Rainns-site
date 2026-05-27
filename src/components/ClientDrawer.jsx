@@ -54,6 +54,8 @@ export default function ClientDrawer({ open, client, onClose, onSaved }) {
   const [generatingLink, setGeneratingLink] = useState(false);
   const [checkoutUrl, setCheckoutUrl] = useState("");
   const [linkCopied, setLinkCopied] = useState(false);
+  const [enableBooking, setEnableBooking] = useState(false);
+  const [bookingCap, setBookingCap] = useState(6);
   const [trialDays, setTrialDays] = useState("");
 
   const isEdit = Boolean(client?.id);
@@ -122,6 +124,9 @@ export default function ClientDrawer({ open, client, onClose, onSaved }) {
           brand_voice_notes: form.brand_voice_notes,
           // If present, the AI gets a live booking tool for this client's calendar
           cal_event_type_id: form.cal_event_type_id || undefined,
+          // Auto-create a Cal.com event type if none exists yet
+          enable_booking: enableBooking && !form.cal_event_type_id ? true : undefined,
+          booking_daily_cap: Number(bookingCap) || 6,
           // If present, the function UPDATES this agent's prompt instead of creating a new one
           retell_agent_id: form.retell_agent_id || undefined,
         }),
@@ -137,17 +142,21 @@ export default function ClientDrawer({ open, client, onClose, onSaved }) {
         ...f,
         retell_agent_id: data.agent_id,
         retell_phone_number: data.phone_number || f.retell_phone_number,
+        cal_event_type_id: data.cal_event_type_id || f.cal_event_type_id,
         step_agent_built: true,
       }));
       const ctx = data.website_used ? " (used website info)" : "";
-      if (data.updated) {
-        setProvisionMsg(`Agent updated with the latest info ✓${ctx}`);
+      const booked = data.cal_event_type_id ? ` · 📅 Booking calendar #${data.cal_event_type_id} created — SAVE to finish` : "";
+      if (data.booking_setup_error) {
+        setProvisionMsg(`Agent ready ✓${ctx} — but booking setup failed: ${data.booking_setup_error}`);
+      } else if (data.updated) {
+        setProvisionMsg(`Agent updated with the latest info ✓${ctx}${booked}`);
       } else if (data.phone_number) {
-        setProvisionMsg(`Agent ${data.agent_id} · Number ${data.phone_number}${ctx}`);
+        setProvisionMsg(`Agent ${data.agent_id} · Number ${data.phone_number}${ctx}${booked}`);
       } else if (data.phone_error) {
-        setProvisionMsg(`Agent created ✓${ctx} — but phone number failed: ${data.phone_error}`);
+        setProvisionMsg(`Agent created ✓${ctx}${booked} — but phone number failed: ${data.phone_error}`);
       } else {
-        setProvisionMsg(`Agent created: ${data.agent_id}${ctx}`);
+        setProvisionMsg(`Agent created: ${data.agent_id}${ctx}${booked}`);
       }
     } catch (e) {
       setError(e.message ?? "Could not provision agent.");
@@ -354,7 +363,7 @@ export default function ClientDrawer({ open, client, onClose, onSaved }) {
                         </span>
                       </div>
                       <p className="text-[12px] text-slate-600 leading-relaxed">
-                        Creates a fully-configured LLM + voice agent from this client's intake data. Pulls business name, hours, services, objections, and brand voice into the system prompt.
+                        Creates a fully-configured LLM + voice agent from this client's intake data — business name, hours, services, objections, brand voice, and their website.
                       </p>
                     </div>
                     <button
@@ -376,6 +385,34 @@ export default function ClientDrawer({ open, client, onClose, onSaved }) {
                       )}
                     </button>
                   </div>
+
+                  {/* Auto-create booking calendar toggle (only when none exists yet) */}
+                  {!form.cal_event_type_id && (
+                    <label className="flex items-center gap-2 mb-3 text-[12px] text-slate-700 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={enableBooking}
+                        onChange={(e) => setEnableBooking(e.target.checked)}
+                        className="w-3.5 h-3.5 rounded border-slate-400 text-rain-700 focus:ring-rain-500"
+                      />
+                      <span>Auto-create a Cal.com booking calendar so the AI can book real estimates</span>
+                      {enableBooking && (
+                        <span className="inline-flex items-center gap-1 ml-1">
+                          · max
+                          <input
+                            type="number"
+                            min="1"
+                            max="50"
+                            value={bookingCap}
+                            onChange={(e) => setBookingCap(e.target.value)}
+                            className="w-12 bg-cream-100 border border-slate-900/10 rounded px-1.5 py-0.5 text-[12px] text-center"
+                          />
+                          /day
+                        </span>
+                      )}
+                    </label>
+                  )}
+
                   {provisionMsg && (
                     <div className={`flex items-start gap-2 text-[12px] rounded-lg px-3 py-2 ${
                       provisionMsg.includes("failed")

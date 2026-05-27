@@ -115,6 +115,42 @@ async function fetchWebsiteContext(url) {
   }
 }
 
+// Auto-creates a Cal.com event type for this client and returns its numeric ID.
+// Uses the global Koemori Cal.com account (CALCOM_API_KEY). Availability comes
+// from the account's default schedule; we set a per-day booking cap here.
+// NOTE: cal-api-version is the calibration point if this 4xxs.
+const CAL_EVENT_TYPES_VERSION = "2024-06-14";
+async function createCalEventType({ apiKey, businessName, dailyCap, lengthMin }) {
+  const slug = (slugify(businessName) || "estimate") + "-" + Math.random().toString(36).slice(2, 7);
+  const res = await fetch("https://api.cal.com/v2/event-types", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "cal-api-version": CAL_EVENT_TYPES_VERSION,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      title: `Estimate – ${businessName}`,
+      slug,
+      lengthInMinutes: Number(lengthMin) || 30,
+      description: `Free estimate with ${businessName}.`,
+      bookingLimitsCount: { day: Number(dailyCap) || 6 },
+    }),
+  });
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error(`Cal.com event-type create failed (${res.status}): ${t.slice(0, 220)}`);
+  }
+  const data = await res.json().catch(() => ({}));
+  const id = data?.data?.id ?? data?.event_type?.id ?? data?.id;
+  if (!id) throw new Error("Cal.com created the event type but returned no id");
+  return String(id);
+}
+
+function slugify(s) {
+  return String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
+}
+
 function extractAreaCode(phoneStr) {
   if (!phoneStr) return null;
   const digits = String(phoneStr).replace(/\D/g, "");
@@ -170,7 +206,30 @@ exports.handler = async (event) => {
 
   // Pull website context (best-effort) and build the prompt
   const websiteContext = await fetchWebsiteContext(body.website);
-  const bookingEnabled = Boolean(body.cal_event_type_id);
+
+  // Resolve the effective Cal.com event type. If booking is requested and none
+  // exists yet, auto-create one (best-effort — never blocks agent provisioning).
+  let effectiveEventTypeId = body.cal_event_type_id || null;
+  let booking_setup_error = null;
+  if (!effectiveEventTypeId && body.enable_booking) {
+    const calKey = process.env.CALCOM_API_KEY;
+    if (!calKey) {
+      booking_setup_error = "CALCOM_API_KEY is not set in Netlify, so the booking calendar couldn't be created.";
+    } else {
+      try {
+        effectiveEventTypeId = await createCalEventType({
+          apiKey: calKey,
+          businessName: body.business_name,
+          dailyCap: body.booking_daily_cap,
+          lengthMin: body.booking_length,
+        });
+      } catch (e) {
+        booking_setup_error = e.message;
+      }
+    }
+  }
+
+  const bookingEnabled = Boolean(effectiveEventTypeId);
   const generalPrompt = buildPrompt(body, websiteContext, bookingEnabled);
 
   // When booking is enabled, give the LLM a tool to check availability + book
@@ -244,6 +303,8 @@ exports.handler = async (event) => {
           llm_id: llmId,
           updated: true,
           website_used: Boolean(websiteContext),
+          cal_event_type_id: effectiveEventTypeId,
+          booking_setup_error,
         }),
       };
     } catch (e) {
@@ -336,6 +397,8 @@ exports.handler = async (event) => {
       phone_number,
       phone_error,
       website_used: Boolean(websiteContext),
+      cal_event_type_id: effectiveEventTypeId,
+      booking_setup_error,
     }),
   };
 };
