@@ -114,10 +114,14 @@ export default function ClientDrawer({ open, client, onClose, onSaved }) {
         body: JSON.stringify({
           business_name: form.business_name,
           industry: form.industry,
+          website: form.website,
+          business_phone: form.business_phone,
           business_hours: form.business_hours,
           services: form.services,
           top_objections: form.top_objections,
           brand_voice_notes: form.brand_voice_notes,
+          // If present, the function UPDATES this agent's prompt instead of creating a new one
+          retell_agent_id: form.retell_agent_id || undefined,
         }),
       });
 
@@ -133,12 +137,15 @@ export default function ClientDrawer({ open, client, onClose, onSaved }) {
         retell_phone_number: data.phone_number || f.retell_phone_number,
         step_agent_built: true,
       }));
-      if (data.phone_number) {
-        setProvisionMsg(`Agent ${data.agent_id} · Number ${data.phone_number}`);
+      const ctx = data.website_used ? " (used website info)" : "";
+      if (data.updated) {
+        setProvisionMsg(`Agent updated with the latest info ✓${ctx}`);
+      } else if (data.phone_number) {
+        setProvisionMsg(`Agent ${data.agent_id} · Number ${data.phone_number}${ctx}`);
       } else if (data.phone_error) {
-        setProvisionMsg(`Agent created ✓ — but phone number failed: ${data.phone_error}`);
+        setProvisionMsg(`Agent created ✓${ctx} — but phone number failed: ${data.phone_error}`);
       } else {
-        setProvisionMsg(`Agent created: ${data.agent_id}`);
+        setProvisionMsg(`Agent created: ${data.agent_id}${ctx}`);
       }
     } catch (e) {
       setError(e.message ?? "Could not provision agent.");

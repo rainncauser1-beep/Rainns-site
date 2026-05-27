@@ -1,43 +1,115 @@
-// Provisions a Retell LLM + Agent for a new client.
+// Provisions OR updates a Retell LLM + Agent for a client.
 // Auth: caller must send a Supabase access token in `Authorization: Bearer <jwt>`
-// whose email matches ADMIN_EMAIL. The JWT is base64-decoded for the email check —
-// for a stronger check, the function could verify the signature against Supabase's
-// JWKS, but the access token can only be issued by Supabase itself.
+// whose email matches ADMIN_EMAIL.
+//
+// If the request includes an existing `retell_agent_id`, we UPDATE that agent's
+// prompt in place (keeping the same agent + phone number). Otherwise we CREATE
+// a new LLM + Agent + phone number.
+//
+// When a `website` is provided we best-effort fetch and extract its text and
+// feed it to the AI so the agent actually knows the business.
 
 const ADMIN_EMAIL = "rainn.causer1@gmail.com";
 
-function buildPrompt(c) {
+function buildPrompt(c, websiteContext) {
+  const name = c.agent_display_name || "the AI receptionist";
   const lines = [];
-  lines.push(`You are the AI receptionist for ${c.business_name}${c.industry ? `, a ${c.industry} business` : ""}.`);
+  lines.push(`You are ${name} for ${c.business_name}, a roofing company. You answer the phone like a sharp, warm, capable front-office person.`);
   lines.push("");
-  lines.push("Your job: answer inbound calls, qualify leads, handle objections, and book appointments.");
-  lines.push("Be warm, direct, and professional. Speak naturally — never sound scripted.");
+  lines.push("# YOUR GOAL");
+  lines.push("Answer warmly, figure out what the caller needs, capture their details, and line up an estimate or callback. NEVER let a potential customer hang up without getting their name and a callback number.");
+  lines.push("");
+  lines.push("# HOW YOU SOUND");
+  lines.push("Warm, confident, down-to-earth, efficient. Short, natural sentences. Never robotic or scripted. Match the caller's pace. Brief small talk is fine, but keep things moving.");
+  if (c.brand_voice_notes) lines.push(`Brand voice notes: ${c.brand_voice_notes}`);
   lines.push("");
   if (c.business_hours) {
-    lines.push(`BUSINESS HOURS:\n${c.business_hours}`);
+    lines.push("# BUSINESS HOURS");
+    lines.push(c.business_hours);
     lines.push("");
   }
   if (c.services) {
-    lines.push(`SERVICES OFFERED:\n${c.services}`);
+    lines.push("# SERVICES OFFERED");
+    lines.push(c.services);
     lines.push("");
   }
-  if (c.top_objections) {
-    lines.push(`OBJECTION HANDLING:\nIf the caller raises any of these, here's how to handle:\n${c.top_objections}`);
+  if (websiteContext) {
+    lines.push("# ABOUT THIS BUSINESS (pulled from their website — use it to answer accurately; do NOT read it out verbatim)");
+    lines.push(websiteContext);
     lines.push("");
   }
-  if (c.brand_voice_notes) {
-    lines.push(`BRAND VOICE GUIDANCE:\n${c.brand_voice_notes}`);
-    lines.push("");
-  }
-  lines.push("WHEN A CALLER WANTS TO BOOK:");
-  lines.push("1. Confirm what they need help with");
-  lines.push("2. Offer 2-3 specific time windows (e.g. tomorrow 9-11am or 2-4pm)");
-  lines.push("3. Capture their name and best callback number");
-  lines.push("4. Confirm details and end the call warmly");
+  lines.push("# WHAT TO FIND OUT (qualify naturally — a conversation, not an interrogation)");
+  lines.push("- Caller's name");
+  lines.push("- Best callback number");
+  lines.push("- Service address or area");
+  lines.push("- What's going on: leak, missing/damaged shingles, full replacement, new construction, inspection, or storm/hail damage");
+  lines.push("- Is it an insurance or storm claim?");
+  lines.push("- How urgent it is (an active leak is urgent)");
   lines.push("");
-  lines.push("If the question is technical or complex, say \"Let me have one of our specialists call you back\" and book a callback.");
-  lines.push("Never make up information you don't have. Never quote prices unless explicitly told.");
+  lines.push("# BOOKING — READ CAREFULLY");
+  lines.push("You do NOT have live access to the calendar, so you must NEVER promise, confirm, or 'lock in' a specific appointment time, and never tell two callers the same slot is reserved.");
+  lines.push("Instead: ask what generally works for them (mornings vs afternoons, which days), capture that preference, and tell them the team will confirm the exact time by text or call shortly.");
+  lines.push('Example: "Perfect — I\'ve got your details and that mornings this week work best. The team will text you shortly to lock in the exact time. Sound good?"');
+  lines.push("You are collecting a request, not committing the schedule.");
+  lines.push("");
+  if (c.top_objections) {
+    lines.push("# COMMON OBJECTIONS & HOW TO HANDLE");
+    lines.push(c.top_objections);
+    lines.push("");
+  }
+  lines.push("# HARD RULES");
+  lines.push("- Never quote exact prices or guarantee pricing unless explicitly given a price to share. If pushed, say pricing depends on the inspection and the team will give an exact quote.");
+  lines.push("- Never make up details you don't have (warranties, materials, timelines). If unsure, say a specialist will follow up.");
+  lines.push("- Never guarantee a specific appointment time (see BOOKING).");
+  lines.push("- Always get a name and callback number before the call ends.");
+  lines.push("- For emergencies (active major leak, storm damage): reassure them, mark it urgent, and make clear the team will call back fast.");
+  lines.push("");
+  lines.push("# CLOSING");
+  lines.push("Recap what you captured, confirm the callback number, thank them by name, and let them know the team will be in touch shortly.");
   return lines.join("\n");
+}
+
+// Best-effort: fetch a website and extract readable text for agent context.
+async function fetchWebsiteContext(url) {
+  if (!url) return null;
+  let target = String(url).trim();
+  if (!/^https?:\/\//i.test(target)) target = "https://" + target;
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 7000);
+    const res = await fetch(target, {
+      signal: controller.signal,
+      headers: { "User-Agent": "KoemoriBot/1.0 (+https://koemori.ai)" },
+    });
+    clearTimeout(timer);
+    if (!res.ok) return null;
+    const html = await res.text();
+    let text = html
+      .replace(/<script[\s\S]*?<\/script>/gi, " ")
+      .replace(/<style[\s\S]*?<\/style>/gi, " ")
+      .replace(/<\/(p|div|h[1-6]|li|br)>/gi, "\n")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&nbsp;/gi, " ")
+      .replace(/&amp;/gi, "&")
+      .replace(/&#39;|&rsquo;|&lsquo;/gi, "'")
+      .replace(/&quot;|&ldquo;|&rdquo;/gi, '"')
+      .replace(/[ \t]+/g, " ")
+      .replace(/\n\s*\n+/g, "\n")
+      .trim();
+    if (!text) return null;
+    return text.length > 3000 ? text.slice(0, 3000) + "…" : text;
+  } catch {
+    return null;
+  }
+}
+
+function extractAreaCode(phoneStr) {
+  if (!phoneStr) return null;
+  const digits = String(phoneStr).replace(/\D/g, "");
+  if (digits.length >= 10) {
+    return Number(digits.slice(-10, -7));
+  }
+  return null;
 }
 
 exports.handler = async (event) => {
@@ -51,12 +123,10 @@ exports.handler = async (event) => {
     return { statusCode: 401, body: JSON.stringify({ error: "Missing bearer token" }) };
   }
   const token = auth.slice(7);
-
   let payload;
   try {
     const payloadPart = token.split(".")[1];
-    const decoded = Buffer.from(payloadPart, "base64").toString("utf8");
-    payload = JSON.parse(decoded);
+    payload = JSON.parse(Buffer.from(payloadPart, "base64").toString("utf8"));
   } catch {
     return { statusCode: 401, body: JSON.stringify({ error: "Invalid token" }) };
   }
@@ -86,17 +156,64 @@ exports.handler = async (event) => {
   const greetName = body.agent_display_name || "Ava";
   const beginMessage = `Hi, this is ${greetName} with ${body.business_name}. How can I help you today?`;
 
-  // --- Step 1: create the LLM (the "brain") ---
+  // Pull website context (best-effort) and build the prompt
+  const websiteContext = await fetchWebsiteContext(body.website);
+  const generalPrompt = buildPrompt(body, websiteContext);
+
+  // ============================================================
+  // UPDATE PATH — client already has an agent: refresh its prompt
+  // ============================================================
+  if (body.retell_agent_id) {
+    try {
+      // Look up the agent to find its LLM id
+      const getRes = await fetch(`https://api.retellai.com/get-agent/${body.retell_agent_id}`, {
+        headers: { Authorization: `Bearer ${apiKey}` },
+      });
+      if (!getRes.ok) {
+        const errText = await getRes.text();
+        return { statusCode: getRes.status, body: JSON.stringify({ error: "Could not load existing agent", detail: errText }) };
+      }
+      const agentObj = await getRes.json();
+      const llmId = agentObj?.response_engine?.llm_id;
+      if (!llmId) {
+        return { statusCode: 500, body: JSON.stringify({ error: "Existing agent has no LLM to update" }) };
+      }
+
+      const updRes = await fetch(`https://api.retellai.com/update-retell-llm/${llmId}`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ general_prompt: generalPrompt, begin_message: beginMessage }),
+      });
+      if (!updRes.ok) {
+        const errText = await updRes.text();
+        return { statusCode: updRes.status, body: JSON.stringify({ error: "Could not update agent prompt", detail: errText }) };
+      }
+
+      return {
+        statusCode: 200,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          agent_id: body.retell_agent_id,
+          llm_id: llmId,
+          updated: true,
+          website_used: Boolean(websiteContext),
+        }),
+      };
+    } catch (e) {
+      return { statusCode: 500, body: JSON.stringify({ error: "Network error updating agent", detail: e.message }) };
+    }
+  }
+
+  // ============================================================
+  // CREATE PATH — brand new LLM + Agent + phone number
+  // ============================================================
   let llm;
   try {
     const llmRes = await fetch("https://api.retellai.com/create-retell-llm", {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        general_prompt: buildPrompt(body),
+        general_prompt: generalPrompt,
         model: "gpt-4o-mini",
         model_temperature: 0.3,
         begin_message: beginMessage,
@@ -104,19 +221,13 @@ exports.handler = async (event) => {
     });
     if (!llmRes.ok) {
       const errText = await llmRes.text();
-      return {
-        statusCode: llmRes.status,
-        body: JSON.stringify({ error: "Retell LLM creation failed", detail: errText }),
-      };
+      return { statusCode: llmRes.status, body: JSON.stringify({ error: "Retell LLM creation failed", detail: errText }) };
     }
     llm = await llmRes.json();
   } catch (e) {
     return { statusCode: 500, body: JSON.stringify({ error: "Network error creating LLM", detail: e.message }) };
   }
 
-  // --- Step 2: create the Agent (voice + behavior wrapper) ---
-  // Point its post-call webhook at our lead-handoff function so every call
-  // automatically emails the lead to the client + logs to Supabase.
   const siteUrl = process.env.URL || "https://koemori.ai";
   const webhookUrl = `${siteUrl}/.netlify/functions/lead-handoff`;
 
@@ -124,10 +235,7 @@ exports.handler = async (event) => {
   try {
     const agentRes = await fetch("https://api.retellai.com/create-agent", {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         response_engine: { type: "retell-llm", llm_id: llm.llm_id },
         agent_name: `${body.business_name} · ${greetName}`,
@@ -140,34 +248,21 @@ exports.handler = async (event) => {
     });
     if (!agentRes.ok) {
       const errText = await agentRes.text();
-      return {
-        statusCode: agentRes.status,
-        body: JSON.stringify({ error: "Retell agent creation failed", detail: errText, llm_id: llm.llm_id }),
-      };
+      return { statusCode: agentRes.status, body: JSON.stringify({ error: "Retell agent creation failed", detail: errText, llm_id: llm.llm_id }) };
     }
     agent = await agentRes.json();
   } catch (e) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: "Network error creating agent", detail: e.message, llm_id: llm.llm_id }),
-    };
+    return { statusCode: 500, body: JSON.stringify({ error: "Network error creating agent", detail: e.message, llm_id: llm.llm_id }) };
   }
 
-  // --- Step 3: provision a phone number (best-effort) ---
-  // We try to buy a number in the client's local area code (pulled from their
-  // business phone). If that fails for any reason — no payment method on
-  // Retell, area code unavailable, etc. — we still return the agent_id and
-  // surface a phone_error so the admin UI can warn but not block.
+  // Phone number (best-effort)
   let phone_number = null;
   let phone_error = null;
   try {
     const areaCode = extractAreaCode(body.business_phone) ?? 615;
     const phoneRes = await fetch("https://api.retellai.com/create-phone-number", {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         inbound_agent_id: agent.agent_id,
         area_code: areaCode,
@@ -192,15 +287,7 @@ exports.handler = async (event) => {
       llm_id: llm.llm_id,
       phone_number,
       phone_error,
+      website_used: Boolean(websiteContext),
     }),
   };
 };
-
-function extractAreaCode(phoneStr) {
-  if (!phoneStr) return null;
-  const digits = String(phoneStr).replace(/\D/g, "");
-  if (digits.length >= 10) {
-    return Number(digits.slice(-10, -7));
-  }
-  return null;
-}
