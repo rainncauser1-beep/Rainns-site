@@ -19,9 +19,11 @@ export default function ContactSection() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!consent) return;
     setLoading(true);
-    await saveContactSubmission({ ...form, sms_consent: true });
+    // SMS consent is OPTIONAL (TCPA / 10DLC: not a condition of purchase).
+    // We record whether they actually checked the box so we only text the
+    // ones who opted in.
+    await saveContactSubmission({ ...form, sms_consent: consent });
     setSubmitted(true);
     setLoading(false);
   };
@@ -94,19 +96,17 @@ export default function ContactSection() {
                     checked={consent}
                     onChange={(e) => setConsent(e.target.checked)}
                     className="mt-0.5 w-4 h-4 rounded border-slate-400 text-rain-700 focus:ring-rain-500 flex-shrink-0"
-                    required
                   />
                   <span>
-                    I agree to receive SMS messages from <strong>Koemori</strong> about my audit
-                    and service updates. Message and data rates may apply. Reply{" "}
-                    <strong>STOP</strong> to opt out or{" "}
-                    <strong>HELP</strong> for help. Consent is not a condition of purchase.
+                    By checking this box, I consent to receive text messages from Koemori.
+                    Message/data rates apply. Consent is not a condition of purchase. Reply
+                    STOP to cancel.
                   </span>
                 </label>
 
                 <button
                   type="submit"
-                  disabled={!consent || loading}
+                  disabled={loading}
                   className="sm:col-span-2 group inline-flex items-center justify-center gap-2 bg-slate-900 text-cream-100 px-6 py-4 rounded-full font-medium hover:bg-rain-700 transition disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {loading ? (

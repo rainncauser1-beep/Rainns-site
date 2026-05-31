@@ -26,12 +26,6 @@ export default function Terms() {
         <h1 className="font-display text-4xl md:text-5xl text-slate-900 tracking-tight mb-3">Terms of Service</h1>
         <p className="text-slate-500 text-sm mb-6">Effective {EFFECTIVE}</p>
 
-        <div className="bg-amber-50 border border-amber-200 rounded-xl px-5 py-4 mb-10 text-[13px] text-amber-900 leading-relaxed">
-          <strong>Draft — pending attorney review.</strong> This document is a working draft provided
-          for convenience and is not legal advice. It has not yet been reviewed by a licensed attorney.
-          Do not rely on it as final until your counsel has approved it.
-        </div>
-
         <P>
           These Terms of Service ("Terms") govern the managed services provided by{" "}
           <strong>Koemori</strong>, a registered trade name (DBA) of <strong>Driveway Detailers LLC</strong>,

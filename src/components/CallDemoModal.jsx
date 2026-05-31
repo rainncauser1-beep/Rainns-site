@@ -233,8 +233,7 @@ export default function CallDemoModal({ open, onClose }) {
                     </button>
                   </form>
                   <p className="mt-4 text-[11px] text-slate-500 text-center">
-                    By continuing you agree to receive SMS/call outreach from Koemori.
-                    Reply STOP to unsubscribe.
+                    We'll use your email only to start your free demo calls.
                   </p>
                 </motion.div>
               )}
