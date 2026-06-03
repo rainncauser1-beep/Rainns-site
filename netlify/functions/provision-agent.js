@@ -161,6 +161,35 @@ function extractAreaCode(phoneStr) {
 }
 
 exports.handler = async (event) => {
+  // --- TEMP DIAG: GET ?diag_agent=agent_xxx returns agent + LLM tools/prompt ---
+  if (event.httpMethod === "GET" && event.queryStringParameters?.diag_agent) {
+    const apiKey = process.env.RETELL_API_KEY;
+    if (!apiKey) return { statusCode: 200, body: JSON.stringify({ error: "no RETELL_API_KEY" }) };
+    const aid = event.queryStringParameters.diag_agent;
+    const out = {};
+    try {
+      const aRes = await fetch(`https://api.retellai.com/get-agent/${aid}`, { headers: { Authorization: `Bearer ${apiKey}` } });
+      const aJson = await aRes.json();
+      out.agent = { agent_id: aJson.agent_id, webhook_url: aJson.webhook_url, response_engine: aJson.response_engine };
+      const llmId = aJson?.response_engine?.llm_id;
+      if (llmId) {
+        const lRes = await fetch(`https://api.retellai.com/get-retell-llm/${llmId}`, { headers: { Authorization: `Bearer ${apiKey}` } });
+        const lJson = await lRes.json();
+        out.llm = {
+          llm_id: lJson.llm_id,
+          model: lJson.model,
+          begin_message: lJson.begin_message,
+          general_tools: lJson.general_tools || [],
+          tool_count: (lJson.general_tools || []).length,
+          prompt_preview: (lJson.general_prompt || "").slice(0, 400),
+          prompt_has_booking: (lJson.general_prompt || "").includes("manage_booking"),
+        };
+      }
+    } catch (e) { out.error = e.message; }
+    return { statusCode: 200, headers: { "Content-Type": "application/json" }, body: JSON.stringify(out, null, 2) };
+  }
+  // --- END DIAG ---
+
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: JSON.stringify({ error: "Method not allowed" }) };
   }
