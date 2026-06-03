@@ -13,8 +13,14 @@ const ADMIN_EMAIL = "rainn.causer1@gmail.com";
 
 function buildPrompt(c, websiteContext, bookingEnabled) {
   const name = c.agent_display_name || "the AI receptionist";
+  const tz = c.cal_timezone || "America/Chicago";
   const lines = [];
   lines.push(`You are ${name} for ${c.business_name}, a roofing company. You answer the phone like a sharp, warm, capable front-office person.`);
+  lines.push("");
+  lines.push("# CURRENT DATE & TIME (CRITICAL)");
+  lines.push(`It is currently {{current_time_[${tz}]}}.`);
+  lines.push("Use THIS value for any date math. When the caller says 'tomorrow', 'next week', 'next Monday', etc., compute from the date and time above — NEVER from your training data. Your training data is years old; the date above is the truth.");
+  lines.push("When passing a date to the manage_booking tool, format it as YYYY-MM-DD using the date above as 'today'.");
   lines.push("");
   lines.push("# YOUR GOAL");
   lines.push("Answer warmly, figure out what the caller needs, capture their details, and line up an estimate or callback. NEVER let a potential customer hang up without getting their name and a callback number.");
@@ -161,35 +167,6 @@ function extractAreaCode(phoneStr) {
 }
 
 exports.handler = async (event) => {
-  // --- TEMP DIAG: GET ?diag_agent=agent_xxx returns agent + LLM tools/prompt ---
-  if (event.httpMethod === "GET" && event.queryStringParameters?.diag_agent) {
-    const apiKey = process.env.RETELL_API_KEY;
-    if (!apiKey) return { statusCode: 200, body: JSON.stringify({ error: "no RETELL_API_KEY" }) };
-    const aid = event.queryStringParameters.diag_agent;
-    const out = {};
-    try {
-      const aRes = await fetch(`https://api.retellai.com/get-agent/${aid}`, { headers: { Authorization: `Bearer ${apiKey}` } });
-      const aJson = await aRes.json();
-      out.agent = { agent_id: aJson.agent_id, webhook_url: aJson.webhook_url, response_engine: aJson.response_engine };
-      const llmId = aJson?.response_engine?.llm_id;
-      if (llmId) {
-        const lRes = await fetch(`https://api.retellai.com/get-retell-llm/${llmId}`, { headers: { Authorization: `Bearer ${apiKey}` } });
-        const lJson = await lRes.json();
-        out.llm = {
-          llm_id: lJson.llm_id,
-          model: lJson.model,
-          begin_message: lJson.begin_message,
-          general_tools: lJson.general_tools || [],
-          tool_count: (lJson.general_tools || []).length,
-          prompt_preview: (lJson.general_prompt || "").slice(0, 400),
-          prompt_has_booking: (lJson.general_prompt || "").includes("manage_booking"),
-        };
-      }
-    } catch (e) { out.error = e.message; }
-    return { statusCode: 200, headers: { "Content-Type": "application/json" }, body: JSON.stringify(out, null, 2) };
-  }
-  // --- END DIAG ---
-
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: JSON.stringify({ error: "Method not allowed" }) };
   }

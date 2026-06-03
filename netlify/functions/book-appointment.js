@@ -66,10 +66,15 @@ exports.handler = async (event) => {
 
 async function checkAvailability({ calKey, eventTypeId, timeZone, args }) {
   // Default to a 7-day window starting from the requested date (or today)
-  const startDate = args.date ? new Date(args.date) : new Date();
+  let startDate = args.date ? new Date(args.date) : new Date();
   if (isNaN(startDate.getTime())) return reply("What day works best for you?");
+  // Defensive: LLMs often hallucinate dates from their training cutoff (e.g.,
+  // sending 2023 when it's actually 2026). Clamp to today if in the past.
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  if (startDate < today) startDate = today;
   const start = startDate.toISOString().slice(0, 10);
-  const endDate = new Date(startDate.getTime() + 7 * 86400000);
+  // Widen to 14 days so "next week" / "the week after" still find slots.
+  const endDate = new Date(startDate.getTime() + 14 * 86400000);
   const end = endDate.toISOString().slice(0, 10);
 
   const url = `${CAL_BASE}/slots?eventTypeId=${eventTypeId}&start=${start}&end=${end}&timeZone=${encodeURIComponent(timeZone)}`;
