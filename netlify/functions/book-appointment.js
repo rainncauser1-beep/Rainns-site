@@ -174,7 +174,7 @@ async function bookSlot({ calKey, eventTypeId, timeZone, args, client }) {
   }
 
   return reply(
-    `Booked! Confirm to the caller: "${friendlyTime(start, timeZone)}". Tell them they'll get a confirmation and the team will see them then.`
+    `Booked! Confirm to the caller: "${friendlyTime(resolvedStartISO, timeZone)}". Tell them they'll get a confirmation and the team will see them then.`
   );
 }
 
