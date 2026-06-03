@@ -104,8 +104,38 @@ async function checkAvailability({ calKey, eventTypeId, timeZone, args }) {
 }
 
 async function bookSlot({ calKey, eventTypeId, timeZone, args, client }) {
-  const start = args.start_time || args.start;
-  if (!start) return reply("I need the exact time to book — ask the caller to pick one of the open times first.");
+  const rawStart = args.start_time || args.start;
+  if (!rawStart) return reply("I need the exact time to book — ask the caller to pick one of the open times first.");
+
+  // Defensive: if the LLM passed a past start_time (date hallucination),
+  // recover by finding a real future slot with the matching time-of-day.
+  let resolvedStartISO = new Date(rawStart).toISOString();
+  const requestedDate = new Date(rawStart);
+  const now = new Date();
+  if (requestedDate < now) {
+    const hhmm = String(rawStart).slice(11, 16); // "10:00" from "...T10:00:00..."
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const start = today.toISOString().slice(0, 10);
+    const end = new Date(today.getTime() + 14 * 86400000).toISOString().slice(0, 10);
+    try {
+      const sRes = await fetch(
+        `${CAL_BASE}/slots?eventTypeId=${eventTypeId}&start=${start}&end=${end}&timeZone=${encodeURIComponent(timeZone)}`,
+        { headers: { Authorization: `Bearer ${calKey}`, "cal-api-version": CAL_API_VERSION_SLOTS } }
+      );
+      if (sRes.ok) {
+        const sData = await sRes.json();
+        const byDay = sData?.data || {};
+        const todayStr = today.toISOString().slice(0, 10);
+        // Prefer the first FUTURE day (skip today, caller likely meant tomorrow)
+        for (const day of Object.keys(byDay).sort()) {
+          if (day === todayStr) continue;
+          const slots = byDay[day] || [];
+          const match = slots.find((s) => String(s.start || s).slice(11, 16) === hhmm);
+          if (match) { resolvedStartISO = new Date(match.start || match).toISOString(); break; }
+        }
+      }
+    } catch {}
+  }
 
   const name = args.caller_name || "Caller";
   const phoneDigits = String(args.caller_phone || "").replace(/\D/g, "");
@@ -114,7 +144,7 @@ async function bookSlot({ calKey, eventTypeId, timeZone, args, client }) {
     : `lead${phoneDigits || Date.now()}@koemori.ai`;
 
   const payload = {
-    start: new Date(start).toISOString(),
+    start: resolvedStartISO,
     eventTypeId,
     attendee: {
       name,

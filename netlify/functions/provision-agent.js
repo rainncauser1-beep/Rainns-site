@@ -17,10 +17,19 @@ function buildPrompt(c, websiteContext, bookingEnabled) {
   const lines = [];
   lines.push(`You are ${name} for ${c.business_name}, a roofing company. You answer the phone like a sharp, warm, capable front-office person.`);
   lines.push("");
+  // Bake the actual current date string into the prompt — Retell's dynamic
+  // variables aren't reliably substituted, and the model's training cutoff
+  // makes it hallucinate dates from years ago without an explicit anchor.
+  const nowStr = new Date().toLocaleString("en-US", {
+    timeZone: tz, weekday: "long", year: "numeric", month: "long", day: "numeric",
+    hour: "numeric", minute: "2-digit",
+  });
+  const todayIso = new Date().toLocaleString("sv-SE", { timeZone: tz }).slice(0, 10); // YYYY-MM-DD in tz
   lines.push("# CURRENT DATE & TIME (CRITICAL)");
-  lines.push(`It is currently {{current_time_[${tz}]}}.`);
-  lines.push("Use THIS value for any date math. When the caller says 'tomorrow', 'next week', 'next Monday', etc., compute from the date and time above — NEVER from your training data. Your training data is years old; the date above is the truth.");
-  lines.push("When passing a date to the manage_booking tool, format it as YYYY-MM-DD using the date above as 'today'.");
+  lines.push(`Today is ${nowStr} (timezone ${tz}).`);
+  lines.push(`In YYYY-MM-DD format, today is ${todayIso}.`);
+  lines.push("Use THESE values for any date math. When the caller says 'tomorrow', 'next week', 'next Monday', etc., compute from the date above — NEVER from your training data. Your training data is years old; the date above is the truth.");
+  lines.push(`When passing a date to the manage_booking tool, format it as YYYY-MM-DD with the YEAR being ${todayIso.slice(0, 4)} (or later — never an older year).`);
   lines.push("");
   lines.push("# YOUR GOAL");
   lines.push("Answer warmly, figure out what the caller needs, capture their details, and line up an estimate or callback. NEVER let a potential customer hang up without getting their name and a callback number.");
