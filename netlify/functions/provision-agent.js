@@ -11,6 +11,20 @@
 
 const ADMIN_EMAIL = "rainn.causer1@gmail.com";
 
+// Post-call analysis fields — Retell's LLM extracts these structured values
+// from every call and ships them back in call.call_analysis.custom_analysis_data.
+// We surface them in lead emails + SMS so the roofer knows where to go and what
+// the caller actually needs.
+const POST_CALL_FIELDS = [
+  { type: "string", name: "caller_name", description: "The caller's full name as they introduced themselves. Empty if not provided." },
+  { type: "string", name: "address", description: "The full service address (street, city, state) the caller gave for the work. Empty if not provided." },
+  { type: "string", name: "service_requested", description: "What roofing work the caller wants — e.g. 'leak repair', 'full replacement', 'routine inspection', 'storm damage assessment', 'gutter repair'. Empty if unclear." },
+  { type: "string", name: "urgency", description: "How urgent the work is: 'emergency' (active leak / immediate damage), 'soon' (within a week), 'routine' (general inspection / no rush), or empty if unclear." },
+  { type: "string", name: "preferred_time", description: "Caller's preferred day/time for the estimate or appointment, if they mentioned one. Empty if not provided." },
+  { type: "boolean", name: "is_insurance_claim", description: "True if the caller mentioned this is an insurance or storm claim." },
+  { type: "string", name: "appointment_booked", description: "If an appointment was successfully booked through the manage_booking tool, the ISO 8601 start time of that booking. Empty if no booking was made." },
+];
+
 function buildPrompt(c, websiteContext, bookingEnabled) {
   const name = c.agent_display_name || "the AI receptionist";
   const tz = c.cal_timezone || "America/Chicago";
@@ -310,6 +324,19 @@ exports.handler = async (event) => {
         return { statusCode: updRes.status, body: JSON.stringify({ error: "Could not update agent prompt", detail: errText }) };
       }
 
+      // Also PATCH the agent itself so post-call analysis fields stay in sync
+      // (address/service/urgency extraction). Best-effort — don't fail the
+      // whole update if this errors.
+      try {
+        await fetch(`https://api.retellai.com/update-agent/${body.retell_agent_id}`, {
+          method: "PATCH",
+          headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ post_call_analysis_data: POST_CALL_FIELDS }),
+        });
+      } catch (e) {
+        console.error("update-agent post_call_analysis_data failed:", e.message);
+      }
+
       return {
         statusCode: 200,
         headers: { "Content-Type": "application/json" },
@@ -368,6 +395,7 @@ exports.handler = async (event) => {
         responsiveness: 1,
         interruption_sensitivity: 1,
         webhook_url: webhookUrl,
+        post_call_analysis_data: POST_CALL_FIELDS,
       }),
     });
     if (!agentRes.ok) {

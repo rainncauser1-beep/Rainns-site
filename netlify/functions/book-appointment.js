@@ -96,10 +96,17 @@ async function checkAvailability({ calKey, eventTypeId, timeZone, args }) {
   if (flat.length === 0) {
     return reply("There's nothing open in that window. Ask the caller for another day or a general preference, then we can try again.");
   }
-  const offered = flat.slice(0, 3).map((iso) => friendlyTime(iso, timeZone));
+  // Return up to 24 slots so the model sees the whole day(s) and can match
+  // morning/afternoon/specific-time requests — not just the first 3.
+  const available = flat.slice(0, 24);
+  const friendlyList = available.map((iso) => friendlyTime(iso, timeZone));
   return reply(
-    `These times are open: ${offered.join("; ")}. Offer these to the caller. When they pick one, call this function again with action="book", the exact start_time (ISO 8601), caller_name, caller_phone, and caller_email if given.`,
-    { open_slots_iso: flat.slice(0, 3) }
+    `These times are OPEN (already filtered to real availability): ${friendlyList.join("; ")}. ` +
+    `Pick the 2–3 that best match what the caller asked for and offer those. ` +
+    `If the caller asked for a specific time (e.g. "2 PM"), check whether it's in this list and confirm it if so. ` +
+    `If not, tell them that exact time isn't open and offer the closest available time from the list. ` +
+    `When the caller chooses, call this function again with action="book" and the EXACT start_time from open_slots_iso below.`,
+    { open_slots_iso: available }
   );
 }
 

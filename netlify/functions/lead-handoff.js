@@ -134,9 +134,31 @@ async function sendLeadEmail(client, call, row) {
     : "—";
   const businessName = client.business_name || "your business";
 
+  // Retell extracts structured fields per the post_call_analysis_data config
+  const cd = call.call_analysis?.custom_analysis_data || {};
+
   const sentimentBadge = sentiment
     ? `<span style="display:inline-block; padding:2px 8px; border-radius:9999px; font-size:11px; font-weight:600; letter-spacing:0.04em; text-transform:uppercase; background:${sentimentColor(sentiment).bg}; color:${sentimentColor(sentiment).fg};">${escapeHtml(sentiment)}</span>`
     : "";
+
+  // Build the "Captured details" block (only fields that were actually filled)
+  const detailRow = (label, val) =>
+    val ? `<tr><td style="padding:4px 12px 4px 0; color:#6b7280; font-size:13px; vertical-align:top; white-space:nowrap;">${escapeHtml(label)}</td><td style="padding:4px 0; font-size:14px; color:#0b1220;">${escapeHtml(val)}</td></tr>` : "";
+  const urgencyDisplay = cd.urgency ? `${cd.urgency}${String(cd.urgency).toLowerCase() === "emergency" ? " 🚨" : ""}` : "";
+  const detailsBlock =
+    (cd.caller_name || cd.address || cd.service_requested || cd.urgency || cd.preferred_time || cd.is_insurance_claim || cd.appointment_booked)
+      ? `
+      <p style="margin:20px 0 6px;"><strong style="font-size:13px; color:#6b7280; letter-spacing:0.05em; text-transform:uppercase;">Captured Details</strong></p>
+      <table style="border-collapse:collapse; width:100%; margin:0 0 8px;">
+        ${detailRow("Name", cd.caller_name)}
+        ${detailRow("Address", cd.address)}
+        ${detailRow("Service", cd.service_requested)}
+        ${detailRow("Urgency", urgencyDisplay)}
+        ${detailRow("Preferred time", cd.preferred_time)}
+        ${cd.is_insurance_claim ? detailRow("Insurance claim", "Yes") : ""}
+        ${detailRow("✅ Booked", cd.appointment_booked)}
+      </table>`
+      : "";
 
   const transcriptSnippet = call.transcript
     ? `<details style="margin-top:20px;"><summary style="cursor:pointer; color:#15325a; font-weight:600; font-size:14px;">Show full transcript</summary><pre style="margin-top:12px; padding:16px; background:#f8f7f3; border-radius:8px; font-size:12px; line-height:1.6; white-space:pre-wrap; font-family:ui-monospace, Menlo, Monaco, monospace; color:#0b1220; overflow-x:auto;">${escapeHtml(call.transcript)}</pre></details>`
@@ -151,6 +173,8 @@ async function sendLeadEmail(client, call, row) {
         <p style="margin:0 0 8px;"><strong style="font-size:13px; color:#6b7280; letter-spacing:0.05em; text-transform:uppercase;">Caller</strong></p>
         <p style="margin:0; font-size:20px; font-weight:600; color:#15325a;">${escapeHtml(callerPhone)}</p>
       </div>
+
+      ${detailsBlock}
 
       <p style="margin:20px 0 6px;"><strong style="font-size:13px; color:#6b7280; letter-spacing:0.05em; text-transform:uppercase;">Summary</strong> ${sentimentBadge}</p>
       <p style="margin:0; font-size:15px;">${escapeHtml(summary)}</p>
@@ -212,10 +236,24 @@ async function sendLeadSMS(client, call, row) {
 
   const caller = call.from_number || "Unknown";
   const businessName = client.business_name || "your business";
-  const summary = row.summary ? ` — ${row.summary}` : "";
-  // Keep it short; SMS bills per ~160-char segment
-  let body = `New ${businessName} lead from ${caller}${summary} Call them back: ${caller}`;
-  if (body.length > 320) body = body.slice(0, 317) + "…";
+  const cd = call.call_analysis?.custom_analysis_data || {};
+
+  // Build a tight, useful SMS: the name/where/what the roofer needs to act on,
+  // not the whole summary.
+  const parts = [];
+  parts.push(`🔔 ${businessName} lead`);
+  if (cd.caller_name) parts.push(`${cd.caller_name} (${caller})`);
+  else parts.push(caller);
+  if (cd.address) parts.push(`@ ${cd.address}`);
+  if (cd.service_requested) parts.push(cd.service_requested);
+  if (cd.urgency && String(cd.urgency).toLowerCase() === "emergency") parts.push("🚨 URGENT");
+  if (cd.appointment_booked) parts.push(`✅ Booked ${cd.appointment_booked}`);
+  if (!cd.caller_name && !cd.address && !cd.service_requested && row.summary) {
+    parts.push(row.summary);
+  }
+  parts.push(`Call back: ${caller}`);
+  let body = parts.join(" · ");
+  if (body.length > 480) body = body.slice(0, 477) + "…";
 
   const params = new URLSearchParams({ From: from, To: to, Body: body });
 
