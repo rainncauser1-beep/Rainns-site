@@ -430,29 +430,35 @@ exports.handler = async (event) => {
       ? [preferred, ...FALLBACKS.filter((c) => c !== preferred)]
       : FALLBACKS;
 
-    for (const areaCode of candidates) {
-      try {
-        const phoneRes = await fetch("https://api.retellai.com/create-phone-number", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            inbound_agent_id: agent.agent_id,
-            area_code: areaCode,
-            nickname: body.business_name,
-          }),
-        });
-        if (phoneRes.ok) {
-          const phoneData = await phoneRes.json();
-          phone_number = phoneData.phone_number || phoneData.phone_number_pretty || null;
-          if (phone_number) break;
-        } else {
-          const txt = await phoneRes.text();
-          // Only keep the last error for reporting
-          phone_error = `(${areaCode}) ${txt}`;
-        }
-      } catch (e) {
-        phone_error = e.message;
+    // Try area codes in parallel batches of 5 for speed
+    const tryAreaCode = async (areaCode) => {
+      const phoneRes = await fetch("https://api.retellai.com/create-phone-number", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          area_code: areaCode,
+          nickname: body.business_name,
+          // New Retell API format (deprecated inbound_agent_id replaced March 2026)
+          inbound_agents: [{ agent_id: agent.agent_id, weight: 1 }],
+        }),
+      });
+      if (!phoneRes.ok) {
+        const txt = await phoneRes.text();
+        throw new Error(`(${areaCode}) ${txt}`);
       }
+      const data = await phoneRes.json();
+      const num = data.phone_number || data.phone_number_pretty || null;
+      if (!num) throw new Error(`(${areaCode}) no number in response`);
+      return num;
+    };
+
+    // Try in batches of 5 in parallel; stop as soon as one succeeds
+    for (let i = 0; i < candidates.length; i += 5) {
+      const batch = candidates.slice(i, i + 5);
+      const results = await Promise.allSettled(batch.map(tryAreaCode));
+      const success = results.find(r => r.status === "fulfilled");
+      if (success) { phone_number = success.value; break; }
+      phone_error = results[results.length - 1].reason?.message || "all failed";
     }
     if (phone_number) phone_error = null;
   }
