@@ -385,100 +385,166 @@ export default function Portal() {
           </p>
         </motion.div>
 
-        {/* AI Number + Forwarding card */}
+        {/* AI Number + Setup Guide */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: EASE, delay: 0.05 }}
-          className="bg-slate-900 text-cream-100 rounded-3xl p-8 md:p-10 mb-8 relative overflow-hidden"
+          className="mb-8"
         >
-          <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-rain-700/30 blur-[80px]" />
-          <div className="relative grid md:grid-cols-2 gap-8 items-center">
-            <div>
+          {/* AI number hero */}
+          <div className="bg-slate-900 text-cream-100 rounded-3xl p-8 md:p-10 mb-4 relative overflow-hidden">
+            <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-rain-700/30 blur-[80px]" />
+            <div className="relative">
               <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-rain-300 mb-3">
                 Your AI phone number
               </div>
               {aiNumber ? (
-                <>
-                  <div className="font-display text-4xl md:text-5xl tracking-tight mb-3 break-all">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                  <div className="font-display text-4xl md:text-5xl tracking-tight break-all">
                     {fmtPhone(aiNumber)}
                   </div>
                   <a
                     href={`tel:${aiNumber.replace(/[^0-9+]/g, "")}`}
-                    className="inline-flex items-center gap-2 bg-rain-500 hover:bg-rain-400 text-slate-900 px-4 py-2 rounded-full text-sm font-medium transition"
+                    className="inline-flex items-center gap-2 bg-rain-500 hover:bg-rain-400 text-slate-900 px-4 py-2 rounded-full text-sm font-medium transition self-start"
                   >
-                    <Phone className="w-3.5 h-3.5" /> Call it to test
+                    <Phone className="w-3.5 h-3.5" /> Call to test
                   </a>
-                </>
+                </div>
               ) : (
-                <div className="text-cream-100/70 text-sm leading-relaxed">
-                  Your dedicated AI number is being provisioned. You'll get an
-                  email within 24 hours with the number and forwarding code.
+                <div className="text-cream-100/70 text-sm leading-relaxed max-w-md">
+                  Your dedicated AI number is being set up. You'll get an email
+                  within 24 hours with the number and setup instructions.
                 </div>
               )}
-            </div>
-
-            {aiNumber && (
-              <div>
-                <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-rain-300 mb-3">
-                  Forwarding setup
-                </div>
-                <p className="text-cream-100/80 text-sm leading-relaxed mb-4">
-                  Dial this code from your business phone — calls forward to AI
-                  only when you don't answer in 2 rings.
+              {aiNumber && (
+                <p className="mt-3 text-cream-100/60 text-sm">
+                  Callers never see this number — they call your regular number and the AI picks up when you don't answer.
                 </p>
-                <div className="flex flex-wrap gap-1.5 mb-3">
-                  {CARRIERS.map((c) => (
-                    <button
-                      key={c.name}
-                      onClick={() => setCarrier(c.name)}
-                      className={`px-3 py-1.5 rounded-full text-[12px] font-medium transition ${
-                        carrier === c.name
-                          ? "bg-cream-100 text-slate-900"
-                          : "bg-cream-100/10 text-cream-100/70 hover:bg-cream-100/20"
-                      }`}
-                    >
-                      {c.name}
-                    </button>
-                  ))}
-                </div>
-                <div className="bg-slate-800/60 border border-cream-100/10 rounded-xl px-4 py-3 font-mono text-base text-cream-100 break-all">
-                  {fmtCode(selectedCarrier.code, aiNumber)}
-                </div>
-
-                <button
-                  onClick={() => setShowForwardCodes(!showForwardCodes)}
-                  className="mt-3 text-[12px] text-rain-300 hover:text-rain-200 transition flex items-center gap-1"
-                >
-                  {showForwardCodes ? "Hide" : "Show"} other options (vacation mode / turn off)
-                  {showForwardCodes ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                </button>
-
-                <AnimatePresence>
-                  {showForwardCodes && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.25, ease: EASE }}
-                      className="overflow-hidden"
-                    >
-                      <div className="mt-3 space-y-2 text-[12px]">
-                        <div>
-                          <span className="text-cream-100/60">Send ALL calls to AI (vacation mode):</span>
-                          <div className="font-mono text-cream-100 mt-0.5">{fmtCode(selectedCarrier.unconditional, aiNumber)}</div>
-                        </div>
-                        <div>
-                          <span className="text-cream-100/60">Turn off forwarding (you take all calls):</span>
-                          <div className="font-mono text-cream-100 mt-0.5">{selectedCarrier.off}</div>
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            )}
+              )}
+            </div>
           </div>
+
+          {/* Step by step setup */}
+          {aiNumber && (
+            <div className="bg-cream-50 border border-slate-900/8 rounded-3xl p-7 md:p-10 space-y-8">
+              <div>
+                <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-rain-600 mb-1">Setup guide</div>
+                <h2 className="font-display text-2xl text-slate-900 tracking-tight">3 steps to go live</h2>
+                <p className="text-slate-500 text-sm mt-1">Takes about 5 minutes. Do these in order.</p>
+              </div>
+
+              {/* Step 1 */}
+              <div className="flex gap-5">
+                <div className="flex-shrink-0 w-9 h-9 rounded-full bg-slate-900 text-cream-100 flex items-center justify-center font-bold text-sm">1</div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-slate-900 text-[15px] mb-1">Call your AI to hear how it sounds</h3>
+                  <p className="text-slate-600 text-sm leading-relaxed mb-3">
+                    Dial <span className="font-mono bg-cream-200 px-1.5 py-0.5 rounded text-slate-800">{fmtPhone(aiNumber)}</span> from any phone right now. The AI will answer as your business. This is just a test — nothing is forwarded yet.
+                  </p>
+                  <a
+                    href={`tel:${aiNumber.replace(/[^0-9+]/g, "")}`}
+                    className="inline-flex items-center gap-2 bg-slate-900 text-cream-100 px-4 py-2 rounded-full text-sm font-medium hover:bg-rain-700 transition"
+                  >
+                    <Phone className="w-3.5 h-3.5" /> Call now
+                  </a>
+                </div>
+              </div>
+
+              {/* Step 2 */}
+              <div className="flex gap-5">
+                <div className="flex-shrink-0 w-9 h-9 rounded-full bg-slate-900 text-cream-100 flex items-center justify-center font-bold text-sm">2</div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-slate-900 text-[15px] mb-1">Set up forwarding on your phone</h3>
+                  <p className="text-slate-600 text-sm leading-relaxed mb-4">
+                    Open your phone's dialer app and type the code below — then press <strong>Call</strong>. This is a carrier command, not a real call. You'll hear a quick confirmation tone and it's done. Your phone still rings first — the AI only picks up calls you <em>don't</em> answer.
+                  </p>
+
+                  {/* Carrier selector */}
+                  <div className="mb-3">
+                    <p className="text-[11px] font-mono uppercase tracking-wider text-slate-500 mb-2">Select your carrier</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {CARRIERS.map((c) => (
+                        <button
+                          key={c.name}
+                          onClick={() => setCarrier(c.name)}
+                          className={`px-3 py-1.5 rounded-full text-[13px] font-medium transition border ${
+                            carrier === c.name
+                              ? "bg-slate-900 text-cream-100 border-slate-900"
+                              : "bg-cream-100 text-slate-700 border-slate-900/15 hover:border-slate-900/35"
+                          }`}
+                        >
+                          {c.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* The code */}
+                  <div className="bg-slate-900 rounded-2xl p-5 mb-3">
+                    <p className="text-cream-100/60 text-[11px] uppercase tracking-wider font-mono mb-2">Open your dialer and type:</p>
+                    <p className="font-mono text-cream-100 text-xl md:text-2xl break-all tracking-wide">
+                      {fmtCode(selectedCarrier.code, aiNumber)}
+                    </p>
+                    <p className="text-cream-100/50 text-[12px] mt-3">Then press <strong className="text-cream-100/80">Call</strong>. You'll hear a confirmation tone — that means it worked.</p>
+                  </div>
+
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-[13px] text-amber-900 leading-relaxed">
+                    ⚡ <strong>Important:</strong> Your phone number stays the same. Customers call you the exact same way — the AI is invisible to them, only activating when you don't pick up.
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 3 */}
+              <div className="flex gap-5">
+                <div className="flex-shrink-0 w-9 h-9 rounded-full bg-slate-900 text-cream-100 flex items-center justify-center font-bold text-sm">3</div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-slate-900 text-[15px] mb-1">Test that it's working</h3>
+                  <p className="text-slate-600 text-sm leading-relaxed">
+                    Ask a friend to call your <strong>regular business number</strong>. Don't answer. The AI should pick up on the 2nd or 3rd ring. Within 30 seconds you'll get a text and email with a summary of the call — and it'll show up below in your call log.
+                  </p>
+                </div>
+              </div>
+
+              {/* Turn off */}
+              <button
+                onClick={() => setShowForwardCodes(!showForwardCodes)}
+                className="flex items-center gap-2 text-[13px] text-slate-500 hover:text-slate-900 transition"
+              >
+                {showForwardCodes ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                {showForwardCodes ? "Hide" : "Show"} vacation mode &amp; how to turn off forwarding
+              </button>
+
+              <AnimatePresence>
+                {showForwardCodes && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.25, ease: EASE }}
+                    className="overflow-hidden"
+                  >
+                    <div className="bg-cream-100 border border-slate-900/8 rounded-2xl p-5 space-y-4 text-sm">
+                      <div>
+                        <p className="font-semibold text-slate-900 mb-1">Vacation mode — send ALL calls to AI</p>
+                        <p className="text-slate-500 text-[13px] mb-2">Your phone won't ring at all. Every caller goes straight to the AI.</p>
+                        <code className="font-mono bg-slate-900 text-cream-100 px-3 py-1.5 rounded-lg text-[13px]">
+                          {fmtCode(selectedCarrier.unconditional, aiNumber)}
+                        </code>
+                      </div>
+                      <div>
+                        <p className="font-semibold text-slate-900 mb-1">Turn off forwarding completely</p>
+                        <p className="text-slate-500 text-[13px] mb-2">Your phone goes back to normal. AI is off.</p>
+                        <code className="font-mono bg-slate-900 text-cream-100 px-3 py-1.5 rounded-lg text-[13px]">
+                          {selectedCarrier.off}
+                        </code>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
         </motion.div>
 
         {/* Stats row */}
