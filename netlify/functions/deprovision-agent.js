@@ -7,16 +7,21 @@ const crypto = require("crypto");
 const ADMIN_EMAIL = "rainn.causer1@gmail.com";
 
 function verifySupabaseJwt(token) {
-  const secret = process.env.SUPABASE_JWT_SECRET;
+  const secret = process.env.SUPABASE_JWT_SECRET?.trim();
   const parts = token.split(".");
   if (parts.length !== 3) return null;
   const [header, payload, sig] = parts;
   if (secret) {
-    const expected = crypto.createHmac("sha256", secret).update(`${header}.${payload}`).digest("base64url");
+    const expected = crypto.createHmac("sha256", secret)
+      .update(`${header}.${payload}`)
+      .digest("base64")
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=/g, "");
     if (expected !== sig) return null;
   }
   try {
-    return JSON.parse(Buffer.from(payload, "base64").toString("utf8"));
+    return JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
   } catch {
     return null;
   }
