@@ -16,8 +16,10 @@ exports.handler = async (event) => {
   // These surface in Retell as dynamic variables — the agent prompt/greeting
   // must reference {{business_name}} / {{trade}} for them to take effect.
   let dynamicVars = {};
+  let email = null;
   try {
     const body = JSON.parse(event.body || "{}");
+    if (body.email && typeof body.email === "string") email = body.email.trim().toLowerCase();
     if (body.business_name && typeof body.business_name === "string") {
       dynamicVars.business_name = body.business_name.slice(0, 80);
     }
@@ -26,6 +28,20 @@ exports.handler = async (event) => {
     }
   } catch {
     // No/invalid body — fall back to the generic demo
+  }
+
+  // Backend-enforce the 5-call demo limit
+  if (email) {
+    try {
+      const { createClient } = require("@supabase/supabase-js");
+      const sb = createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+      const { data: trial } = await sb.from("demo_trials").select("tries_used").eq("email", email).maybeSingle();
+      if (trial && trial.tries_used >= 5) {
+        return { statusCode: 429, body: JSON.stringify({ error: "Demo limit reached" }) };
+      }
+    } catch {
+      // Supabase unavailable — allow the call rather than block legitimate users
+    }
   }
 
   try {

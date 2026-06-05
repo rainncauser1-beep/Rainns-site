@@ -124,6 +124,7 @@ export default function CallDemoModal({ open, onClose }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          email: email || undefined,
           business_name: bizName.trim() || undefined,
           trade: trade || undefined,
         }),
