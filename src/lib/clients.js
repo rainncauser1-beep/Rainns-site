@@ -87,10 +87,9 @@ export async function saveClient(client) {
         ? null
         : Number(client.setup_fee),
   };
-  // Strip id if not present, timestamps (managed by db), and fields not yet in schema
+  // Strip id if not present, and timestamps (managed by db)
   delete payload.created_at;
   delete payload.updated_at;
-  delete payload.agent_display_name;
 
   if (payload.id) {
     const { data, error } = await supabase
