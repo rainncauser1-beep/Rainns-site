@@ -345,6 +345,50 @@ exports.handler = async (event) => {
         console.error("update-agent post_call_analysis_data failed:", e.message);
       }
 
+      // If no phone number exists yet, buy one now (this client was provisioned
+      // before the number purchase succeeded — give it another shot).
+      let phone_number = body.retell_phone_number || null;
+      let phone_error = null;
+      if (!phone_number) {
+        const preferred = extractAreaCode(body.business_phone);
+        const FALLBACKS = [
+          629, 470, 737, 469, 512, 972, 214, 502, 865, 423, 901,
+          704, 919, 980, 678, 404, 832, 713, 281, 346, 210, 726,
+          303, 720, 480, 602, 623, 503, 971, 206, 425, 253,
+        ];
+        const candidates = preferred
+          ? [preferred, ...FALLBACKS.filter((c) => c !== preferred)]
+          : FALLBACKS;
+
+        const tryAreaCode = async (areaCode) => {
+          const phoneRes = await fetch("https://api.retellai.com/create-phone-number", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              area_code: areaCode,
+              nickname: body.business_name,
+              inbound_agents: [{ agent_id: body.retell_agent_id, weight: 1 }],
+            }),
+          });
+          const responseText = await phoneRes.text();
+          console.log(`[provision-update] area_code=${areaCode} status=${phoneRes.status} body=${responseText.slice(0, 300)}`);
+          if (!phoneRes.ok) throw new Error(`HTTP ${phoneRes.status}: ${responseText.slice(0, 200)}`);
+          const data = JSON.parse(responseText);
+          const num = data.phone_number || data.phone_number_pretty || null;
+          if (!num) throw new Error(`No phone_number in response`);
+          return num;
+        };
+
+        for (let i = 0; i < candidates.length; i += 5) {
+          const batch = candidates.slice(i, i + 5);
+          const results = await Promise.allSettled(batch.map(tryAreaCode));
+          const success = results.find(r => r.status === "fulfilled");
+          if (success) { phone_number = success.value; break; }
+          phone_error = results.map(r => r.reason?.message).filter(Boolean).join(" | ");
+        }
+        if (phone_number) phone_error = null;
+      }
+
       return {
         statusCode: 200,
         headers: { "Content-Type": "application/json" },
@@ -352,6 +396,8 @@ exports.handler = async (event) => {
           agent_id: body.retell_agent_id,
           llm_id: llmId,
           updated: true,
+          phone_number,
+          phone_error,
           website_used: Boolean(websiteContext),
           cal_event_type_id: effectiveEventTypeId,
           booking_setup_error,

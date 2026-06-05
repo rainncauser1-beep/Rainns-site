@@ -130,6 +130,8 @@ export default function ClientDrawer({ open, client, onClose, onSaved }) {
           booking_daily_cap: Number(bookingCap) || 6,
           // If present, the function UPDATES this agent's prompt instead of creating a new one
           retell_agent_id: form.retell_agent_id || undefined,
+          // Pass existing phone number so the function skips buying another one
+          retell_phone_number: form.retell_phone_number || undefined,
         }),
       });
 
