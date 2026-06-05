@@ -7,8 +7,25 @@
 // Body: { action: "pause" | "resume" | "cancel" }
 // Required Netlify env vars: STRIPE_SECRET_KEY, SUPABASE_SERVICE_ROLE_KEY
 
+const crypto = require("crypto");
 const Stripe = require("stripe");
 const { createClient } = require("@supabase/supabase-js");
+
+function verifySupabaseJwt(token) {
+  const secret = process.env.SUPABASE_JWT_SECRET;
+  const parts = token.split(".");
+  if (parts.length !== 3) return null;
+  const [header, payload, sig] = parts;
+  if (secret) {
+    const expected = crypto.createHmac("sha256", secret).update(`${header}.${payload}`).digest("base64url");
+    if (expected !== sig) return null;
+  }
+  try {
+    return JSON.parse(Buffer.from(payload, "base64").toString("utf8"));
+  } catch {
+    return null;
+  }
+}
 
 const ACTIONS = new Set(["pause", "resume", "cancel"]);
 
@@ -24,10 +41,8 @@ exports.handler = async (event) => {
   }
   const token = auth.slice(7);
 
-  let jwt;
-  try {
-    jwt = JSON.parse(Buffer.from(token.split(".")[1], "base64").toString("utf8"));
-  } catch {
+  const jwt = verifySupabaseJwt(token);
+  if (!jwt) {
     return { statusCode: 401, body: JSON.stringify({ error: "Invalid token" }) };
   }
   if (!jwt.email) {

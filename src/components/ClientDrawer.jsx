@@ -115,6 +115,7 @@ export default function ClientDrawer({ open, client, onClose, onSaved }) {
         },
         body: JSON.stringify({
           business_name: form.business_name,
+          agent_display_name: form.agent_display_name || undefined,
           industry: form.industry,
           website: form.website,
           business_phone: form.business_phone,
@@ -458,6 +459,9 @@ export default function ClientDrawer({ open, client, onClose, onSaved }) {
                 </div>
 
                 <div className="grid sm:grid-cols-2 gap-3.5">
+                  <Field label="AI agent name" hint="What the agent calls itself on the phone (e.g. Ava, Alex)">
+                    <input className={inputCls} value={form.agent_display_name} onChange={update("agent_display_name")} placeholder="Ava" />
+                  </Field>
                   <Field label="Retell agent ID" full>
                     <input className={inputCls + " font-mono text-[12px]"} value={form.retell_agent_id} onChange={update("retell_agent_id")} placeholder="agent_xxxxxxxxxxxx" />
                   </Field>

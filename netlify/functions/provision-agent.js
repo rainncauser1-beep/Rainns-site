@@ -9,7 +9,24 @@
 // When a `website` is provided we best-effort fetch and extract its text and
 // feed it to the AI so the agent actually knows the business.
 
+const crypto = require("crypto");
 const ADMIN_EMAIL = "rainn.causer1@gmail.com";
+
+function verifySupabaseJwt(token) {
+  const secret = process.env.SUPABASE_JWT_SECRET;
+  const parts = token.split(".");
+  if (parts.length !== 3) return null;
+  const [header, payload, sig] = parts;
+  if (secret) {
+    const expected = crypto.createHmac("sha256", secret).update(`${header}.${payload}`).digest("base64url");
+    if (expected !== sig) return null;
+  }
+  try {
+    return JSON.parse(Buffer.from(payload, "base64").toString("utf8"));
+  } catch {
+    return null;
+  }
+}
 
 // Post-call analysis fields — Retell's LLM extracts these structured values
 // from every call and ships them back in call.call_analysis.custom_analysis_data.
@@ -200,11 +217,8 @@ exports.handler = async (event) => {
     return { statusCode: 401, body: JSON.stringify({ error: "Missing bearer token" }) };
   }
   const token = auth.slice(7);
-  let payload;
-  try {
-    const payloadPart = token.split(".")[1];
-    payload = JSON.parse(Buffer.from(payloadPart, "base64").toString("utf8"));
-  } catch {
+  const payload = verifySupabaseJwt(token);
+  if (!payload) {
     return { statusCode: 401, body: JSON.stringify({ error: "Invalid token" }) };
   }
   if (payload.email !== ADMIN_EMAIL) {

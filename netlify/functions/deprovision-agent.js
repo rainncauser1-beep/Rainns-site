@@ -3,7 +3,24 @@
 // Body: { retell_agent_id, retell_phone_number }
 // Auth: Supabase bearer token whose email is ADMIN_EMAIL
 
+const crypto = require("crypto");
 const ADMIN_EMAIL = "rainn.causer1@gmail.com";
+
+function verifySupabaseJwt(token) {
+  const secret = process.env.SUPABASE_JWT_SECRET;
+  const parts = token.split(".");
+  if (parts.length !== 3) return null;
+  const [header, payload, sig] = parts;
+  if (secret) {
+    const expected = crypto.createHmac("sha256", secret).update(`${header}.${payload}`).digest("base64url");
+    if (expected !== sig) return null;
+  }
+  try {
+    return JSON.parse(Buffer.from(payload, "base64").toString("utf8"));
+  } catch {
+    return null;
+  }
+}
 
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {
@@ -15,10 +32,8 @@ exports.handler = async (event) => {
     return { statusCode: 401, body: JSON.stringify({ error: "Missing bearer token" }) };
   }
   const token = auth.slice(7);
-  let payload;
-  try {
-    payload = JSON.parse(Buffer.from(token.split(".")[1], "base64").toString("utf8"));
-  } catch {
+  const payload = verifySupabaseJwt(token);
+  if (!payload) {
     return { statusCode: 401, body: JSON.stringify({ error: "Invalid token" }) };
   }
   if (payload.email !== ADMIN_EMAIL) {

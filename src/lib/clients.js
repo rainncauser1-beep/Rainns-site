@@ -43,6 +43,7 @@ export function emptyClient() {
     top_objections: "",
     brand_voice_notes: "",
     crm: "",
+    agent_display_name: "",
     retell_agent_id: "",
     retell_phone_number: "",
     cal_event_type_id: "",
