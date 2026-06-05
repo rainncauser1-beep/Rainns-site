@@ -13,11 +13,13 @@ import RaindropMark from "../components/RaindropMark";
 const EASE = [0.22, 1, 0.36, 1];
 
 // Forwarding instructions per major US carrier
+// **30 suffix = 30-second ring delay before forwarding kicks in.
+// This prevents carrier voicemail (which answers at ~20s) from intercepting the call.
 const CARRIERS = [
-  { name: "AT&T",     code: "**61*{n}#",  unconditional: "**21*{n}#",  off: "##61#" },
-  { name: "Verizon",  code: "*71 {n}",    unconditional: "*72 {n}",    off: "*73"   },
-  { name: "T-Mobile", code: "**61*{n}#",  unconditional: "**21*{n}#",  off: "##61#" },
-  { name: "Other",    code: "*71 {n}",    unconditional: "*72 {n}",    off: "*73"   },
+  { name: "AT&T",     code: "**61*{n}**30#", unconditional: "**21*{n}#",  off: "##61#", verizon: false },
+  { name: "T-Mobile", code: "**61*{n}**30#", unconditional: "**21*{n}#",  off: "##61#", verizon: false },
+  { name: "Verizon",  code: null,             unconditional: "*72 {n}",    off: "*73",   verizon: true  },
+  { name: "Other",    code: "**61*{n}**30#", unconditional: "**21*{n}#",  off: "##61#", verizon: false },
 ];
 
 function fmtCode(template, number) {
@@ -481,13 +483,24 @@ export default function Portal() {
                   </div>
 
                   {/* The code */}
-                  <div className="bg-slate-900 rounded-2xl p-5 mb-3">
-                    <p className="text-cream-100/60 text-[11px] uppercase tracking-wider font-mono mb-2">Open your dialer and type:</p>
-                    <p className="font-mono text-cream-100 text-xl md:text-2xl break-all tracking-wide">
-                      {fmtCode(selectedCarrier.code, aiNumber)}
-                    </p>
-                    <p className="text-cream-100/50 text-[12px] mt-3">Then press <strong className="text-cream-100/80">Call</strong>. You'll hear a confirmation tone — that means it worked.</p>
-                  </div>
+                  {selectedCarrier.verizon ? (
+                    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 mb-3">
+                      <p className="font-semibold text-amber-900 mb-2">Verizon setup is a little different</p>
+                      <p className="text-amber-800 text-sm leading-relaxed mb-3">Verizon doesn't support the forwarding code from your dialer. You have two options:</p>
+                      <ol className="text-sm text-amber-800 space-y-2 list-decimal list-inside leading-relaxed">
+                        <li>Go to <strong>Settings → Phone → Call Forwarding</strong> on your iPhone, turn it on, and enter your AI number: <span className="font-mono bg-amber-100 px-1 rounded">{aiNumber}</span></li>
+                        <li>Or call <strong>611</strong> (Verizon support) and ask them to set up "no-answer call forwarding" to your AI number and extend the ring time to 30 seconds.</li>
+                      </ol>
+                    </div>
+                  ) : (
+                    <div className="bg-slate-900 rounded-2xl p-5 mb-3">
+                      <p className="text-cream-100/60 text-[11px] uppercase tracking-wider font-mono mb-2">Open your dialer and type:</p>
+                      <p className="font-mono text-cream-100 text-xl md:text-2xl break-all tracking-wide">
+                        {fmtCode(selectedCarrier.code, aiNumber)}
+                      </p>
+                      <p className="text-cream-100/50 text-[12px] mt-3">Then press <strong className="text-cream-100/80">Call</strong>. You'll hear a confirmation tone — that means it worked.</p>
+                    </div>
+                  )}
 
                   <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-[13px] text-amber-900 leading-relaxed">
                     ⚡ <strong>Important:</strong> Your phone number stays the same. Customers call you the exact same way — the AI is invisible to them, only activating when you don't pick up.

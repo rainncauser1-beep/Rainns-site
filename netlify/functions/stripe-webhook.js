@@ -253,24 +253,24 @@ function sendWelcomeEmail(client) {
           </div>
           <div style="padding:14px 16px;">
             <p style="margin:0 0 4px;font-size:13px;color:#4b5563;">Open your dialer and type exactly:</p>
-            <p style="margin:6px 0 0;">${s(`**61*${phoneE164}#`)}</p>
-            <p style="margin:8px 0 0;font-size:12px;color:#6b7280;">Then press Call. You'll hear a confirmation beep.</p>
+            <p style="margin:6px 0 0;">${s(`**61*${phoneE164}**30#`)}</p>
+            <p style="margin:8px 0 0;font-size:12px;color:#6b7280;">Then press Call. You'll hear a confirmation beep. The <strong>**30</strong> sets a 30-second ring time so voicemail can't intercept.</p>
           </div>
 
           <div style="padding:12px 16px;background:#f9fafb;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;">
             <p style="margin:0;font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.08em;">Verizon</p>
           </div>
           <div style="padding:14px 16px;">
-            <p style="margin:0 0 4px;font-size:13px;color:#4b5563;">Open your dialer and type exactly:</p>
-            <p style="margin:6px 0 0;">${s(`*71${phoneE164}`)}</p>
-            <p style="margin:8px 0 0;font-size:12px;color:#6b7280;">Then press Call. You'll hear a confirmation tone.</p>
+            <p style="margin:0;font-size:13px;color:#4b5563;line-height:1.7;">Verizon doesn't support dialer codes for this. Two options:<br>
+            <strong>Option 1:</strong> Go to <strong>Settings → Phone → Call Forwarding</strong> on your iPhone and enter ${escapeHtml(phonePretty)}.<br>
+            <strong>Option 2:</strong> Call <strong>611</strong> and ask Verizon to set up no-answer forwarding to ${escapeHtml(phonePretty)} with a 30-second ring time.</p>
           </div>
 
           <div style="padding:12px 16px;background:#f9fafb;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;">
             <p style="margin:0;font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.08em;">Other carriers</p>
           </div>
           <div style="padding:14px 16px;">
-            <p style="margin:0;font-size:13px;color:#4b5563;">Try <strong>*71</strong> followed by your AI number. If that doesn't work, reply to this email and I'll get you the exact code for your carrier.</p>
+            <p style="margin:0;font-size:13px;color:#4b5563;">Try ${s(`**61*${phoneE164}**30#`)} in your dialer, then press Call. If it doesn't work, reply and I'll find the right code for your carrier.</p>
           </div>
         </div>
 
