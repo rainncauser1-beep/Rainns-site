@@ -7,7 +7,24 @@
 // (retell_*, stripe_*, payment_status, monthly_recurring, etc.) stay
 // locked down even if someone bypasses the UI.
 
+const crypto = require("crypto");
 const { createClient } = require("@supabase/supabase-js");
+
+function verifySupabaseJwt(token) {
+  const secret = process.env.SUPABASE_JWT_SECRET;
+  const parts = token.split(".");
+  if (parts.length !== 3) return null;
+  const [header, payload, sig] = parts;
+  if (secret) {
+    const expected = crypto.createHmac("sha256", secret).update(`${header}.${payload}`).digest("base64url");
+    if (expected !== sig) return null;
+  }
+  try {
+    return JSON.parse(Buffer.from(payload, "base64").toString("utf8"));
+  } catch {
+    return null;
+  }
+}
 
 // Fields a portal user is allowed to edit on their own row
 const ALLOWED_FIELDS = new Set([
@@ -29,11 +46,8 @@ exports.handler = async (event) => {
   }
   const token = auth.slice(7);
 
-  let jwt;
-  try {
-    const part = token.split(".")[1];
-    jwt = JSON.parse(Buffer.from(part, "base64").toString("utf8"));
-  } catch {
+  const jwt = verifySupabaseJwt(token);
+  if (!jwt) {
     return { statusCode: 401, body: JSON.stringify({ error: "Invalid token" }) };
   }
   if (!jwt.email) {

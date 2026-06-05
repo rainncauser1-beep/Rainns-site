@@ -7,9 +7,26 @@
 // Body: { client_id, client_email, client_name, setup_amount, monthly_amount }
 // Returns: { url } — the Stripe-hosted checkout URL to share with the client.
 
+const crypto = require("crypto");
 const Stripe = require("stripe");
 
 const ADMIN_EMAIL = "rainn.causer1@gmail.com";
+
+function verifySupabaseJwt(token) {
+  const secret = process.env.SUPABASE_JWT_SECRET;
+  const parts = token.split(".");
+  if (parts.length !== 3) return null;
+  const [header, payload, sig] = parts;
+  if (secret) {
+    const expected = crypto.createHmac("sha256", secret).update(`${header}.${payload}`).digest("base64url");
+    if (expected !== sig) return null;
+  }
+  try {
+    return JSON.parse(Buffer.from(payload, "base64").toString("utf8"));
+  } catch {
+    return null;
+  }
+}
 
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {
@@ -23,11 +40,8 @@ exports.handler = async (event) => {
   }
   const token = auth.slice(7);
 
-  let jwtPayload;
-  try {
-    const part = token.split(".")[1];
-    jwtPayload = JSON.parse(Buffer.from(part, "base64").toString("utf8"));
-  } catch {
+  const jwtPayload = verifySupabaseJwt(token);
+  if (!jwtPayload) {
     return { statusCode: 401, body: JSON.stringify({ error: "Invalid token" }) };
   }
   if (jwtPayload.email !== ADMIN_EMAIL) {
