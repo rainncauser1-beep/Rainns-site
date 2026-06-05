@@ -360,31 +360,29 @@ exports.handler = async (event) => {
           ? [preferred, ...FALLBACKS.filter((c) => c !== preferred)]
           : FALLBACKS;
 
-        const tryAreaCode = async (areaCode) => {
-          const phoneRes = await fetch("https://api.retellai.com/create-phone-number", {
-            method: "POST",
-            headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-            body: JSON.stringify({
-              area_code: areaCode,
-              nickname: body.business_name,
-              inbound_agents: [{ agent_id: body.retell_agent_id, weight: 1 }],
-            }),
-          });
-          const responseText = await phoneRes.text();
-          console.log(`[provision-update] area_code=${areaCode} status=${phoneRes.status} body=${responseText.slice(0, 300)}`);
-          if (!phoneRes.ok) throw new Error(`HTTP ${phoneRes.status}: ${responseText.slice(0, 200)}`);
-          const data = JSON.parse(responseText);
-          const num = data.phone_number || data.phone_number_pretty || null;
-          if (!num) throw new Error(`No phone_number in response`);
-          return num;
-        };
-
-        for (let i = 0; i < candidates.length; i += 5) {
-          const batch = candidates.slice(i, i + 5);
-          const results = await Promise.allSettled(batch.map(tryAreaCode));
-          const success = results.find(r => r.status === "fulfilled");
-          if (success) { phone_number = success.value; break; }
-          phone_error = results.map(r => r.reason?.message).filter(Boolean).join(" | ");
+        // Sequential — stop as soon as one succeeds to avoid buying multiple numbers
+        for (const areaCode of candidates) {
+          try {
+            const phoneRes = await fetch("https://api.retellai.com/create-phone-number", {
+              method: "POST",
+              headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+              body: JSON.stringify({
+                area_code: areaCode,
+                nickname: body.business_name,
+                inbound_agents: [{ agent_id: body.retell_agent_id, weight: 1 }],
+              }),
+            });
+            const responseText = await phoneRes.text();
+            if (phoneRes.ok) {
+              const data = JSON.parse(responseText);
+              const num = data.phone_number || null;
+              if (num) { phone_number = num; break; }
+            }
+            // 404 = no numbers in this area code, keep trying; other errors = stop
+            if (phoneRes.status !== 404) { phone_error = `${phoneRes.status}: ${responseText.slice(0, 150)}`; break; }
+          } catch (e) {
+            phone_error = e.message;
+          }
         }
         if (phone_number) phone_error = null;
       }
@@ -476,35 +474,28 @@ exports.handler = async (event) => {
       ? [preferred, ...FALLBACKS.filter((c) => c !== preferred)]
       : FALLBACKS;
 
-    // Test with one area code first to surface the exact error
-    const tryAreaCode = async (areaCode) => {
-      const reqBody = {
-        area_code: areaCode,
-        nickname: body.business_name,
-        inbound_agents: [{ agent_id: agent.agent_id, weight: 1 }],
-      };
-      console.log(`[provision] Trying area code ${areaCode}, agent ${agent.agent_id}`);
-      const phoneRes = await fetch("https://api.retellai.com/create-phone-number", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify(reqBody),
-      });
-      const responseText = await phoneRes.text();
-      console.log(`[provision] area_code=${areaCode} status=${phoneRes.status} body=${responseText.slice(0, 300)}`);
-      if (!phoneRes.ok) throw new Error(`HTTP ${phoneRes.status}: ${responseText.slice(0, 200)}`);
-      const data = JSON.parse(responseText);
-      const num = data.phone_number || data.phone_number_pretty || null;
-      if (!num) throw new Error(`No phone_number in response: ${responseText.slice(0, 200)}`);
-      return num;
-    };
-
-    // Try in batches of 5 in parallel; stop as soon as one succeeds
-    for (let i = 0; i < candidates.length; i += 5) {
-      const batch = candidates.slice(i, i + 5);
-      const results = await Promise.allSettled(batch.map(tryAreaCode));
-      const success = results.find(r => r.status === "fulfilled");
-      if (success) { phone_number = success.value; break; }
-      phone_error = results.map(r => r.reason?.message).filter(Boolean).join(" | ");
+    // Sequential — stop as soon as one succeeds to avoid buying multiple numbers
+    for (const areaCode of candidates) {
+      try {
+        const phoneRes = await fetch("https://api.retellai.com/create-phone-number", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            area_code: areaCode,
+            nickname: body.business_name,
+            inbound_agents: [{ agent_id: agent.agent_id, weight: 1 }],
+          }),
+        });
+        const responseText = await phoneRes.text();
+        if (phoneRes.ok) {
+          const data = JSON.parse(responseText);
+          const num = data.phone_number || null;
+          if (num) { phone_number = num; break; }
+        }
+        if (phoneRes.status !== 404) { phone_error = `${phoneRes.status}: ${responseText.slice(0, 150)}`; break; }
+      } catch (e) {
+        phone_error = e.message;
+      }
     }
     if (phone_number) phone_error = null;
   }
