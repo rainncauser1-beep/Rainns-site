@@ -21,7 +21,7 @@ const features = [
   {
     icon: Phone,
     title: "24/7 inbound coverage",
-    body: "Picks up in under 2 rings regardless of time or day. Custom voice, custom persona, objection library tuned for roofing.",
+    body: "Answers every call instantly when forwarding is on. Custom voice, custom persona, objection library tuned for roofing. Toggle it on when you're on a job, off when you're back.",
   },
   {
     icon: MessageSquare,
@@ -170,7 +170,7 @@ export default function Automations() {
               variants={fadeUp}
               className="text-lg text-slate-600 leading-relaxed mb-10 max-w-lg"
             >
-              Built for roofers. Koemori picks up every inbound call in under 2 rings, qualifies
+              Built for roofers. When you're on a job, Koemori answers every call instantly, qualifies
               the homeowner, lines up the estimate, and sends you the full lead before they hang up —
               while you're still up on the last roof.
             </motion.p>

@@ -228,7 +228,7 @@ function sendWelcomeEmail(client) {
     <div style="margin:28px 0;padding:24px;background:#f0f6ff;border:2px solid #15325a;border-radius:12px;text-align:center;">
       <p style="margin:0 0 4px;font-size:12px;color:#15325a;text-transform:uppercase;letter-spacing:0.1em;font-weight:600;">Your AI phone number</p>
       <p style="margin:0;font-size:34px;font-weight:700;color:#15325a;letter-spacing:0.04em;">${escapeHtml(phonePretty)}</p>
-      <p style="margin:8px 0 0;font-size:13px;color:#4b6a8a;">Save this number — calls forward here when you don't answer</p>
+      <p style="margin:8px 0 0;font-size:13px;color:#4b6a8a;">Save this number — calls forward here when forwarding is on</p>
     </div>
 
     <!-- Step 1 -->

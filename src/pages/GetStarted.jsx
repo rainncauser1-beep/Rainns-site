@@ -76,7 +76,7 @@ const faqs = [
   },
   {
     q: "Do I keep my existing phone number?",
-    a: "Yes. We don't port your number. Your existing carrier (Verizon, AT&T, etc.) supports conditional call forwarding — we give you a 6-digit code to dial, and inbound calls forward to your Koemori line after 2 rings.",
+    a: "Yes. We give you a dedicated Koemori number. Forward your existing number to it with a simple carrier code — takes 10 seconds. Toggle it on when you're on a job, off when you're back in the office. Your customers always call your same number.",
   },
   {
     q: "Can I cancel anytime?",

@@ -421,7 +421,7 @@ export default function Portal() {
               )}
               {aiNumber && (
                 <p className="mt-3 text-cream-100/60 text-sm">
-                  Callers never see this number — they call your regular number and the AI picks up when you don't answer.
+                  Callers never see this number — they call your regular number and the AI picks up when forwarding is on.
                 </p>
               )}
             </div>
@@ -513,7 +513,7 @@ export default function Portal() {
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-slate-900 text-[15px] mb-1">Test that it's working</h3>
                   <p className="text-slate-600 text-sm leading-relaxed">
-                    Ask a friend to call your <strong>regular business number</strong>. Don't answer. The AI should pick up on the 2nd or 3rd ring. Within 30 seconds you'll get a text and email with a summary of the call — and it'll show up below in your call log.
+                    After dialing the ON code, ask a friend to call your <strong>regular business number</strong>. The AI should answer immediately. Within 30 seconds you'll get a text and email with a summary of the call — and it'll show up below in your call log.
                   </p>
                 </div>
               </div>
@@ -683,7 +683,7 @@ export default function Portal() {
                 Quiet for now
               </div>
               <p className="text-slate-600 text-sm max-w-sm mx-auto leading-relaxed">
-                Once you've forwarded your number, every missed call shows up
+                Once forwarding is on, every call shows up
                 here with a transcript and summary.
               </p>
             </div>
