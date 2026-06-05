@@ -430,25 +430,25 @@ exports.handler = async (event) => {
       ? [preferred, ...FALLBACKS.filter((c) => c !== preferred)]
       : FALLBACKS;
 
-    // Try area codes in parallel batches of 5 for speed
+    // Test with one area code first to surface the exact error
     const tryAreaCode = async (areaCode) => {
+      const reqBody = {
+        area_code: areaCode,
+        nickname: body.business_name,
+        inbound_agents: [{ agent_id: agent.agent_id, weight: 1 }],
+      };
+      console.log(`[provision] Trying area code ${areaCode}, agent ${agent.agent_id}`);
       const phoneRes = await fetch("https://api.retellai.com/create-phone-number", {
         method: "POST",
         headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          area_code: areaCode,
-          nickname: body.business_name,
-          // New Retell API format (deprecated inbound_agent_id replaced March 2026)
-          inbound_agents: [{ agent_id: agent.agent_id, weight: 1 }],
-        }),
+        body: JSON.stringify(reqBody),
       });
-      if (!phoneRes.ok) {
-        const txt = await phoneRes.text();
-        throw new Error(`(${areaCode}) ${txt}`);
-      }
-      const data = await phoneRes.json();
+      const responseText = await phoneRes.text();
+      console.log(`[provision] area_code=${areaCode} status=${phoneRes.status} body=${responseText.slice(0, 300)}`);
+      if (!phoneRes.ok) throw new Error(`HTTP ${phoneRes.status}: ${responseText.slice(0, 200)}`);
+      const data = JSON.parse(responseText);
       const num = data.phone_number || data.phone_number_pretty || null;
-      if (!num) throw new Error(`(${areaCode}) no number in response`);
+      if (!num) throw new Error(`No phone_number in response: ${responseText.slice(0, 200)}`);
       return num;
     };
 
@@ -458,7 +458,7 @@ exports.handler = async (event) => {
       const results = await Promise.allSettled(batch.map(tryAreaCode));
       const success = results.find(r => r.status === "fulfilled");
       if (success) { phone_number = success.value; break; }
-      phone_error = results[results.length - 1].reason?.message || "all failed";
+      phone_error = results.map(r => r.reason?.message).filter(Boolean).join(" | ");
     }
     if (phone_number) phone_error = null;
   }

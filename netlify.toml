@@ -2,15 +2,6 @@
   command = "npm run build"
   publish = "dist"
 
-[functions]
-  node_bundler = "esbuild"
-
-[[functions]]
-  path = "/netlify/functions/provision-agent"
-  [functions.timeout]
-    background = false
-    timeout = 26
-
 [[redirects]]
   from = "/*"
   to = "/index.html"
