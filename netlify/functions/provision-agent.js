@@ -415,28 +415,46 @@ exports.handler = async (event) => {
     return { statusCode: 500, body: JSON.stringify({ error: "Network error creating agent", detail: e.message, llm_id: llm.llm_id }) };
   }
 
-  // Phone number (best-effort)
+  // Phone number — try client's area code first, then fallbacks until one works.
+  // The exact area code doesn't matter since clients forward calls to this number.
   let phone_number = null;
   let phone_error = null;
-  try {
-    const areaCode = extractAreaCode(body.business_phone) ?? 615;
-    const phoneRes = await fetch("https://api.retellai.com/create-phone-number", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        inbound_agent_id: agent.agent_id,
-        area_code: areaCode,
-        nickname: body.business_name,
-      }),
-    });
-    if (phoneRes.ok) {
-      const phoneData = await phoneRes.json();
-      phone_number = phoneData.phone_number || phoneData.phone_number_pretty || null;
-    } else {
-      phone_error = await phoneRes.text();
+  {
+    const preferred = extractAreaCode(body.business_phone);
+    const FALLBACKS = [
+      629, 470, 737, 469, 512, 972, 214, 502, 865, 423, 901,
+      704, 919, 980, 678, 404, 832, 713, 281, 346, 210, 726,
+      303, 720, 480, 602, 623, 503, 971, 206, 425, 253,
+    ];
+    const candidates = preferred
+      ? [preferred, ...FALLBACKS.filter((c) => c !== preferred)]
+      : FALLBACKS;
+
+    for (const areaCode of candidates) {
+      try {
+        const phoneRes = await fetch("https://api.retellai.com/create-phone-number", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            inbound_agent_id: agent.agent_id,
+            area_code: areaCode,
+            nickname: body.business_name,
+          }),
+        });
+        if (phoneRes.ok) {
+          const phoneData = await phoneRes.json();
+          phone_number = phoneData.phone_number || phoneData.phone_number_pretty || null;
+          if (phone_number) break;
+        } else {
+          const txt = await phoneRes.text();
+          // Only keep the last error for reporting
+          phone_error = `(${areaCode}) ${txt}`;
+        }
+      } catch (e) {
+        phone_error = e.message;
+      }
     }
-  } catch (e) {
-    phone_error = e.message;
+    if (phone_number) phone_error = null;
   }
 
   return {
