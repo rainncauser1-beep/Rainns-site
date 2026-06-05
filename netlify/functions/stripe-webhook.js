@@ -244,38 +244,42 @@ function sendWelcomeEmail(client) {
     <div style="display:flex;gap:14px;margin:24px 0;align-items:flex-start;">
       <div style="min-width:32px;height:32px;background:#15325a;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:15px;text-align:center;line-height:32px;">2</div>
       <div style="flex:1;">
-        <p style="margin:4px 0 8px;font-weight:700;font-size:16px;color:#0b1220;">Set up call forwarding on your phone</p>
-        <p style="margin:0 0 12px;font-size:14px;color:#4b5563;line-height:1.6;">Open your phone's dialer app and dial the code for your carrier. This takes 10 seconds and only needs to be done once.</p>
+        <p style="margin:4px 0 8px;font-weight:700;font-size:16px;color:#0b1220;">Forward your calls to the AI</p>
+        <p style="margin:0 0 12px;font-size:14px;color:#4b5563;line-height:1.6;">Open your phone's dialer and type the code for your carrier, then press Call. You'll hear a quick confirmation tone — done. Use the OFF code anytime to go back to normal.</p>
 
         <div style="border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;">
           <div style="padding:12px 16px;background:#f9fafb;border-bottom:1px solid #e5e7eb;">
             <p style="margin:0;font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.08em;">AT&amp;T or T-Mobile</p>
           </div>
           <div style="padding:14px 16px;">
-            <p style="margin:0 0 4px;font-size:13px;color:#4b5563;">Open your dialer and type exactly:</p>
-            <p style="margin:6px 0 0;">${s(`**61*${phoneE164}**30#`)}</p>
-            <p style="margin:8px 0 0;font-size:12px;color:#6b7280;">Then press Call. You'll hear a confirmation beep. The <strong>**30</strong> sets a 30-second ring time so voicemail can't intercept.</p>
+            <p style="margin:0 0 4px;font-size:13px;color:#4b5563;"><strong>Turn AI ON</strong> — open dialer and type:</p>
+            <p style="margin:6px 0 8px;">${s(`**21*${phoneE164}#`)}</p>
+            <p style="margin:0 0 4px;font-size:13px;color:#4b5563;"><strong>Turn AI OFF</strong> — back to normal:</p>
+            <p style="margin:6px 0 0;">${s("##21#")}</p>
           </div>
 
           <div style="padding:12px 16px;background:#f9fafb;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;">
             <p style="margin:0;font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.08em;">Verizon</p>
           </div>
           <div style="padding:14px 16px;">
-            <p style="margin:0;font-size:13px;color:#4b5563;line-height:1.7;">Verizon doesn't support dialer codes for this. Two options:<br>
-            <strong>Option 1:</strong> Go to <strong>Settings → Phone → Call Forwarding</strong> on your iPhone and enter ${escapeHtml(phonePretty)}.<br>
-            <strong>Option 2:</strong> Call <strong>611</strong> and ask Verizon to set up no-answer forwarding to ${escapeHtml(phonePretty)} with a 30-second ring time.</p>
+            <p style="margin:0 0 4px;font-size:13px;color:#4b5563;"><strong>Turn AI ON:</strong></p>
+            <p style="margin:6px 0 8px;">${s(`*72${phoneE164}`)}</p>
+            <p style="margin:0 0 4px;font-size:13px;color:#4b5563;"><strong>Turn AI OFF:</strong></p>
+            <p style="margin:6px 0 8px;">${s("*73")}</p>
+            <p style="margin:8px 0 0;font-size:12px;color:#6b7280;">If that doesn't work: <strong>Settings → Phone → Call Forwarding</strong> on your iPhone → enter ${escapeHtml(phonePretty)}.</p>
           </div>
 
           <div style="padding:12px 16px;background:#f9fafb;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;">
             <p style="margin:0;font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.08em;">Other carriers</p>
           </div>
           <div style="padding:14px 16px;">
-            <p style="margin:0;font-size:13px;color:#4b5563;">Try ${s(`**61*${phoneE164}**30#`)} in your dialer, then press Call. If it doesn't work, reply and I'll find the right code for your carrier.</p>
+            <p style="margin:0 0 4px;font-size:13px;color:#4b5563;"><strong>Turn AI ON:</strong> ${s(`**21*${phoneE164}#`)} &nbsp; <strong>Turn AI OFF:</strong> ${s("##21#")}</p>
+            <p style="margin:8px 0 0;font-size:12px;color:#6b7280;">If it doesn't work, reply to this email and I'll get you the exact codes.</p>
           </div>
         </div>
 
-        <p style="margin:12px 0 0;font-size:13px;color:#4b5563;background:#fefce8;border:1px solid #fde68a;padding:10px 14px;border-radius:8px;">
-          ⚡ <strong>Important:</strong> This only forwards calls you <em>don't answer</em>. Your phone still rings first — the AI is just the safety net for missed calls.
+        <p style="margin:12px 0 0;font-size:13px;color:#d1fae5;background:#065f46;padding:12px 16px;border-radius:8px;line-height:1.6;">
+          💡 <strong>How roofers use this:</strong> Turn AI ON when you head to a job site. Turn it OFF when you're back in the office. Your customers always call your same number — the AI catches what you can't.
         </p>
       </div>
     </div>
@@ -285,7 +289,7 @@ function sendWelcomeEmail(client) {
       <div style="min-width:32px;height:32px;background:#15325a;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:15px;text-align:center;line-height:32px;">3</div>
       <div style="flex:1;">
         <p style="margin:4px 0 6px;font-weight:700;font-size:16px;color:#0b1220;">Test that it's working</p>
-        <p style="margin:0;font-size:14px;color:#4b5563;line-height:1.6;">Ask a friend to call your regular business number. Let it ring without answering. The AI should pick up on the 2nd or 3rd ring. You'll get a text and email with a summary of the call within 30 seconds.</p>
+        <p style="margin:0;font-size:14px;color:#4b5563;line-height:1.6;">After dialing the ON code, ask a friend to call your regular number. The AI should answer within 2 rings. Within 30 seconds you'll get a text and email with the caller's name, what they need, and a summary of the conversation.</p>
       </div>
     </div>
 

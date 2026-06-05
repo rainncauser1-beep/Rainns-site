@@ -13,13 +13,13 @@ import RaindropMark from "../components/RaindropMark";
 const EASE = [0.22, 1, 0.36, 1];
 
 // Forwarding instructions per major US carrier
-// **30 suffix = 30-second ring delay before forwarding kicks in.
-// This prevents carrier voicemail (which answers at ~20s) from intercepting the call.
+// Unconditional forward = all calls go to AI. Simple, always works.
+// Toggle on/off with the off code. Roofers use this when on job sites.
 const CARRIERS = [
-  { name: "AT&T",     code: "**61*{n}**30#", unconditional: "**21*{n}#",  off: "##61#", verizon: false },
-  { name: "T-Mobile", code: "**61*{n}**30#", unconditional: "**21*{n}#",  off: "##61#", verizon: false },
-  { name: "Verizon",  code: null,             unconditional: "*72 {n}",    off: "*73",   verizon: true  },
-  { name: "Other",    code: "**61*{n}**30#", unconditional: "**21*{n}#",  off: "##61#", verizon: false },
+  { name: "AT&T",     on: "**21*{n}#", off: "##21#", settings: false },
+  { name: "T-Mobile", on: "**21*{n}#", off: "##21#", settings: false },
+  { name: "Verizon",  on: "*72{n}",    off: "*73",   settings: true  },
+  { name: "Other",    on: "**21*{n}#", off: "##21#", settings: false },
 ];
 
 function fmtCode(template, number) {
@@ -457,9 +457,9 @@ export default function Portal() {
               <div className="flex gap-5">
                 <div className="flex-shrink-0 w-9 h-9 rounded-full bg-slate-900 text-cream-100 flex items-center justify-center font-bold text-sm">2</div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-slate-900 text-[15px] mb-1">Set up forwarding on your phone</h3>
+                  <h3 className="font-semibold text-slate-900 text-[15px] mb-1">Forward your calls to the AI</h3>
                   <p className="text-slate-600 text-sm leading-relaxed mb-4">
-                    Open your phone's dialer app and type the code below — then press <strong>Call</strong>. This is a carrier command, not a real call. You'll hear a quick confirmation tone and it's done. Your phone still rings first — the AI only picks up calls you <em>don't</em> answer.
+                    Open your dialer and type the code below, then press <strong>Call</strong>. It's a carrier command — not a real call. You'll hear a quick confirmation tone and you're done. Flip it off just as fast when you want to take calls yourself.
                   </p>
 
                   {/* Carrier selector */}
@@ -482,28 +482,27 @@ export default function Portal() {
                     </div>
                   </div>
 
-                  {/* The code */}
-                  {selectedCarrier.verizon ? (
-                    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 mb-3">
-                      <p className="font-semibold text-amber-900 mb-2">Verizon setup is a little different</p>
-                      <p className="text-amber-800 text-sm leading-relaxed mb-3">Verizon doesn't support the forwarding code from your dialer. You have two options:</p>
-                      <ol className="text-sm text-amber-800 space-y-2 list-decimal list-inside leading-relaxed">
-                        <li>Go to <strong>Settings → Phone → Call Forwarding</strong> on your iPhone, turn it on, and enter your AI number: <span className="font-mono bg-amber-100 px-1 rounded">{aiNumber}</span></li>
-                        <li>Or call <strong>611</strong> (Verizon support) and ask them to set up "no-answer call forwarding" to your AI number and extend the ring time to 30 seconds.</li>
-                      </ol>
+                  {/* Turn ON code */}
+                  <div className="bg-slate-900 rounded-2xl p-5 mb-3">
+                    <p className="text-cream-100/60 text-[11px] uppercase tracking-wider font-mono mb-1">Turn AI ON — open dialer and type:</p>
+                    <p className="font-mono text-cream-100 text-xl md:text-2xl break-all tracking-wide mb-3">
+                      {fmtCode(selectedCarrier.on, aiNumber)}
+                    </p>
+                    <div className="border-t border-cream-100/10 pt-3 mt-1">
+                      <p className="text-cream-100/60 text-[11px] uppercase tracking-wider font-mono mb-1">Turn AI OFF — back to normal:</p>
+                      <p className="font-mono text-cream-100 text-lg break-all">{selectedCarrier.off}</p>
                     </div>
-                  ) : (
-                    <div className="bg-slate-900 rounded-2xl p-5 mb-3">
-                      <p className="text-cream-100/60 text-[11px] uppercase tracking-wider font-mono mb-2">Open your dialer and type:</p>
-                      <p className="font-mono text-cream-100 text-xl md:text-2xl break-all tracking-wide">
-                        {fmtCode(selectedCarrier.code, aiNumber)}
-                      </p>
-                      <p className="text-cream-100/50 text-[12px] mt-3">Then press <strong className="text-cream-100/80">Call</strong>. You'll hear a confirmation tone — that means it worked.</p>
+                    <p className="text-cream-100/40 text-[11px] mt-3">Press Call after each code. You'll hear a confirmation tone.</p>
+                  </div>
+
+                  {selectedCarrier.settings && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-[13px] text-amber-900 leading-relaxed mb-3">
+                      <strong>Verizon tip:</strong> If the dialer code doesn't work, go to <strong>Settings → Phone → Call Forwarding</strong> on your iPhone, toggle it on, and enter <span className="font-mono">{aiNumber}</span>. To turn off, toggle it back.
                     </div>
                   )}
 
-                  <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-[13px] text-amber-900 leading-relaxed">
-                    ⚡ <strong>Important:</strong> Your phone number stays the same. Customers call you the exact same way — the AI is invisible to them, only activating when you don't pick up.
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 text-[13px] text-emerald-900 leading-relaxed">
+                    💡 <strong>How roofers use this:</strong> Turn AI ON when you head to a job site. Turn it OFF when you're back in the office. Your customers always call your same number — the AI just catches what you can't.
                   </div>
                 </div>
               </div>
@@ -519,43 +518,24 @@ export default function Portal() {
                 </div>
               </div>
 
-              {/* Turn off */}
-              <button
-                onClick={() => setShowForwardCodes(!showForwardCodes)}
-                className="flex items-center gap-2 text-[13px] text-slate-500 hover:text-slate-900 transition"
-              >
-                {showForwardCodes ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                {showForwardCodes ? "Hide" : "Show"} vacation mode &amp; how to turn off forwarding
-              </button>
-
-              <AnimatePresence>
-                {showForwardCodes && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.25, ease: EASE }}
-                    className="overflow-hidden"
-                  >
-                    <div className="bg-cream-100 border border-slate-900/8 rounded-2xl p-5 space-y-4 text-sm">
-                      <div>
-                        <p className="font-semibold text-slate-900 mb-1">Vacation mode — send ALL calls to AI</p>
-                        <p className="text-slate-500 text-[13px] mb-2">Your phone won't ring at all. Every caller goes straight to the AI.</p>
-                        <code className="font-mono bg-slate-900 text-cream-100 px-3 py-1.5 rounded-lg text-[13px]">
-                          {fmtCode(selectedCarrier.unconditional, aiNumber)}
-                        </code>
-                      </div>
-                      <div>
-                        <p className="font-semibold text-slate-900 mb-1">Turn off forwarding completely</p>
-                        <p className="text-slate-500 text-[13px] mb-2">Your phone goes back to normal. AI is off.</p>
-                        <code className="font-mono bg-slate-900 text-cream-100 px-3 py-1.5 rounded-lg text-[13px]">
-                          {selectedCarrier.off}
-                        </code>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              {/* Quick reference */}
+              <div className="bg-cream-100 border border-slate-900/8 rounded-2xl p-5">
+                <p className="font-mono text-[10px] uppercase tracking-wider text-slate-500 mb-3">Quick reference — {carrier} codes</p>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <p className="text-slate-500 text-[12px] mb-1">AI ON (forward calls)</p>
+                    <code className="font-mono bg-slate-900 text-cream-100 px-2.5 py-1.5 rounded-lg text-[12px] block break-all">
+                      {fmtCode(selectedCarrier.on, aiNumber)}
+                    </code>
+                  </div>
+                  <div>
+                    <p className="text-slate-500 text-[12px] mb-1">AI OFF (back to normal)</p>
+                    <code className="font-mono bg-slate-900 text-cream-100 px-2.5 py-1.5 rounded-lg text-[12px] block">
+                      {selectedCarrier.off}
+                    </code>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </motion.div>
