@@ -214,56 +214,139 @@ function sendWelcomeEmail(client) {
   const name = client.owner_name?.split(" ")[0] || "there";
   const businessName = client.business_name || "your business";
   const phone = client.retell_phone_number;
+  const phoneDigits = phone ? phone.replace(/\D/g, "") : "";
+  const phoneE164 = phoneDigits.length === 11 ? `+${phoneDigits}` : phoneDigits.length === 10 ? `+1${phoneDigits}` : phone || "";
+  const phonePretty = phoneDigits.length >= 10
+    ? `(${phoneDigits.slice(-10,-7)}) ${phoneDigits.slice(-7,-4)}-${phoneDigits.slice(-4)}`
+    : phone || "";
 
-  const phoneBlock = phone
-    ? `
-        <p style="margin: 24px 0; padding: 20px; background: #f8f7f3; border-left: 3px solid #15325a; border-radius: 4px;">
-          <strong style="font-size: 13px; color: #6b7280; letter-spacing: 0.06em; text-transform: uppercase;">Your AI phone number</strong><br>
-          <span style="font-size: 26px; font-weight: 600; color: #15325a; font-family: -apple-system, system-ui, sans-serif;">${phone}</span>
+  const s = (txt) => `<span style="font-family:ui-monospace,Menlo,monospace;background:#f0f4f8;padding:3px 8px;border-radius:5px;font-size:15px;letter-spacing:0.02em;color:#0b1220;">${escapeHtml(txt)}</span>`;
+
+  const setupSteps = phone ? `
+
+    <!-- AI Number -->
+    <div style="margin:28px 0;padding:24px;background:#f0f6ff;border:2px solid #15325a;border-radius:12px;text-align:center;">
+      <p style="margin:0 0 4px;font-size:12px;color:#15325a;text-transform:uppercase;letter-spacing:0.1em;font-weight:600;">Your AI phone number</p>
+      <p style="margin:0;font-size:34px;font-weight:700;color:#15325a;letter-spacing:0.04em;">${escapeHtml(phonePretty)}</p>
+      <p style="margin:8px 0 0;font-size:13px;color:#4b6a8a;">Save this number — calls forward here when you don't answer</p>
+    </div>
+
+    <!-- Step 1 -->
+    <div style="display:flex;gap:14px;margin:24px 0;align-items:flex-start;">
+      <div style="min-width:32px;height:32px;background:#15325a;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:15px;text-align:center;line-height:32px;">1</div>
+      <div style="flex:1;">
+        <p style="margin:4px 0 6px;font-weight:700;font-size:16px;color:#0b1220;">Call your AI to hear how it sounds</p>
+        <p style="margin:0;font-size:14px;color:#4b5563;line-height:1.6;">Dial ${escapeHtml(phonePretty)} from any phone right now. The AI will answer as your business. This is just a test — no forwarding needed yet.</p>
+      </div>
+    </div>
+
+    <!-- Step 2 -->
+    <div style="display:flex;gap:14px;margin:24px 0;align-items:flex-start;">
+      <div style="min-width:32px;height:32px;background:#15325a;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:15px;text-align:center;line-height:32px;">2</div>
+      <div style="flex:1;">
+        <p style="margin:4px 0 8px;font-weight:700;font-size:16px;color:#0b1220;">Set up call forwarding on your phone</p>
+        <p style="margin:0 0 12px;font-size:14px;color:#4b5563;line-height:1.6;">Open your phone's dialer app and dial the code for your carrier. This takes 10 seconds and only needs to be done once.</p>
+
+        <div style="border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;">
+          <div style="padding:12px 16px;background:#f9fafb;border-bottom:1px solid #e5e7eb;">
+            <p style="margin:0;font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.08em;">AT&amp;T or T-Mobile</p>
+          </div>
+          <div style="padding:14px 16px;">
+            <p style="margin:0 0 4px;font-size:13px;color:#4b5563;">Open your dialer and type exactly:</p>
+            <p style="margin:6px 0 0;">${s(`**61*${phoneE164}#`)}</p>
+            <p style="margin:8px 0 0;font-size:12px;color:#6b7280;">Then press Call. You'll hear a confirmation beep.</p>
+          </div>
+
+          <div style="padding:12px 16px;background:#f9fafb;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;">
+            <p style="margin:0;font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.08em;">Verizon</p>
+          </div>
+          <div style="padding:14px 16px;">
+            <p style="margin:0 0 4px;font-size:13px;color:#4b5563;">Open your dialer and type exactly:</p>
+            <p style="margin:6px 0 0;">${s(`*71${phoneE164}`)}</p>
+            <p style="margin:8px 0 0;font-size:12px;color:#6b7280;">Then press Call. You'll hear a confirmation tone.</p>
+          </div>
+
+          <div style="padding:12px 16px;background:#f9fafb;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;">
+            <p style="margin:0;font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.08em;">Other carriers</p>
+          </div>
+          <div style="padding:14px 16px;">
+            <p style="margin:0;font-size:13px;color:#4b5563;">Try <strong>*71</strong> followed by your AI number. If that doesn't work, reply to this email and I'll get you the exact code for your carrier.</p>
+          </div>
+        </div>
+
+        <p style="margin:12px 0 0;font-size:13px;color:#4b5563;background:#fefce8;border:1px solid #fde68a;padding:10px 14px;border-radius:8px;">
+          ⚡ <strong>Important:</strong> This only forwards calls you <em>don't answer</em>. Your phone still rings first — the AI is just the safety net for missed calls.
         </p>
-        <p>Forward your missed calls to this number using your carrier code:</p>
-        <ul style="line-height: 1.7;">
-          <li><strong>AT&amp;T:</strong> dial <code>**61*${phone}#</code></li>
-          <li><strong>Verizon:</strong> dial <code>*71</code> then ${phone}</li>
-          <li><strong>T-Mobile:</strong> dial <code>**61*${phone}#</code></li>
-          <li><strong>Other carriers:</strong> dial <code>*71</code> then your AI number</li>
-        </ul>
-        <p>This forwards <strong>only the calls you don't answer in 2 rings</strong> — your phone still rings first. The AI is just a safety net.</p>
-      `
-    : `<p>We're finalizing your dedicated AI phone number. You'll get a follow-up email within 24 hours with the number and forwarding instructions.</p>`;
+      </div>
+    </div>
+
+    <!-- Step 3 -->
+    <div style="display:flex;gap:14px;margin:24px 0;align-items:flex-start;">
+      <div style="min-width:32px;height:32px;background:#15325a;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:15px;text-align:center;line-height:32px;">3</div>
+      <div style="flex:1;">
+        <p style="margin:4px 0 6px;font-weight:700;font-size:16px;color:#0b1220;">Test that it's working</p>
+        <p style="margin:0;font-size:14px;color:#4b5563;line-height:1.6;">Ask a friend to call your regular business number. Let it ring without answering. The AI should pick up on the 2nd or 3rd ring. You'll get a text and email with a summary of the call within 30 seconds.</p>
+      </div>
+    </div>
+
+    <!-- Step 4 -->
+    <div style="display:flex;gap:14px;margin:24px 0;align-items:flex-start;">
+      <div style="min-width:32px;height:32px;background:#15325a;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:15px;text-align:center;line-height:32px;">4</div>
+      <div style="flex:1;">
+        <p style="margin:4px 0 6px;font-weight:700;font-size:16px;color:#0b1220;">Check your portal for every call</p>
+        <p style="margin:0 0 12px;font-size:14px;color:#4b5563;line-height:1.6;">Every call your AI takes shows up here with a full transcript, caller info, and a one-tap callback button.</p>
+        <a href="https://koemori.ai/portal/login" style="display:inline-block;background:#15325a;color:#fff;padding:11px 22px;border-radius:9999px;font-weight:600;font-size:14px;text-decoration:none;">Open my portal →</a>
+      </div>
+    </div>
+
+    <!-- Turn off if needed -->
+    <div style="margin:28px 0;padding:16px 20px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;">
+      <p style="margin:0 0 6px;font-weight:700;font-size:14px;color:#0b1220;">Need to turn it off temporarily?</p>
+      <p style="margin:0;font-size:13px;color:#4b5563;line-height:1.6;">
+        AT&amp;T / T-Mobile: dial ${s("##61#")} &nbsp;·&nbsp; Verizon: dial ${s("*73")}
+        <br>This cancels forwarding and your phone goes back to normal.
+      </p>
+    </div>
+
+  ` : `
+    <div style="margin:28px 0;padding:20px;background:#fefce8;border:1px solid #fde68a;border-radius:10px;">
+      <p style="margin:0;font-size:14px;color:#92400e;line-height:1.6;">We're finalizing your dedicated AI phone number and will send a follow-up email within 24 hours with your number and setup instructions.</p>
+    </div>
+  `;
 
   const html = `
-    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; max-width: 560px; margin: 0 auto; color: #0b1220; line-height: 1.55;">
-      <p>Hi ${escapeHtml(name)},</p>
-      <p>Welcome to Koemori — and thanks for trusting us with ${escapeHtml(businessName)}.</p>
-      <p>Your custom AI receptionist is built and ready to start catching calls 24/7.</p>
-      ${phoneBlock}
-      <p><strong>What happens next:</strong></p>
-      <ol style="line-height: 1.7;">
-        <li>I'll personally reach out within 24 hours to run a live test call with you.</li>
-        <li>We'll fine-tune the agent based on how it sounds in real-world use.</li>
-        <li>Once you're happy, dial the forwarding code above and you're live.</li>
-      </ol>
-      <div style="margin: 28px 0; padding: 18px 20px; background: #15325a; border-radius: 10px; text-align: center;">
-        <p style="margin: 0 0 4px; color: #cfe0f5; font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em;">Your portal</p>
-        <p style="margin: 0 0 10px; color: #fff; font-size: 14px;">View calls, transcripts, and toggle the AI on/off</p>
-        <a href="https://koemori.ai/portal/login" style="display: inline-block; background: #fff; color: #15325a; padding: 10px 22px; border-radius: 9999px; font-weight: 600; font-size: 14px; text-decoration: none;">Sign in to portal →</a>
+    <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;max-width:580px;margin:0 auto;color:#0b1220;line-height:1.55;">
+
+      <!-- Header -->
+      <div style="background:#15325a;padding:28px 32px;border-radius:12px 12px 0 0;">
+        <p style="margin:0;font-size:13px;color:#90b8d8;text-transform:uppercase;letter-spacing:0.12em;font-weight:600;">Koemori AI Receptionist</p>
+        <h1 style="margin:8px 0 0;font-size:26px;color:#fff;font-weight:700;">You're all set, ${escapeHtml(name)}.</h1>
       </div>
-      <p>Any questions before then, just reply to this email.</p>
-      <p>— Rainn<br>
-      <span style="color: #6b7280; font-size: 13px;">Koemori · Nashville</span></p>
-      <p style="margin-top:20px; padding-top:16px; border-top:1px solid #e5e7eb; font-size:12px; color:#6b7280; line-height:1.6;">
-        By forwarding your number and going live with Koemori, you agree to our
-        <a href="https://koemori.ai/terms" style="color:#15325a;">Terms of Service</a> and
-        <a href="https://koemori.ai/privacy" style="color:#15325a;">Privacy Policy</a> — including
-        that calls to your line are answered, recorded, and transcribed to capture your leads.
-      </p>
+
+      <!-- Body -->
+      <div style="padding:28px 32px;background:#fff;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 12px 12px;">
+        <p style="margin:0 0 6px;font-size:15px;color:#0b1220;">Your AI receptionist for <strong>${escapeHtml(businessName)}</strong> is live and ready to catch every call you miss — 24 hours a day, 7 days a week.</p>
+        <p style="margin:12px 0 0;font-size:15px;color:#0b1220;">Follow the steps below and you'll be up and running in under 5 minutes.</p>
+
+        ${setupSteps}
+
+        <!-- Sign off -->
+        <div style="margin-top:32px;padding-top:20px;border-top:1px solid #e5e7eb;">
+          <p style="margin:0 0 4px;font-size:15px;">Any questions — just reply to this email. I personally read every one.</p>
+          <p style="margin:16px 0 0;font-size:15px;">— Rainn<br><span style="color:#6b7280;font-size:13px;">Koemori · Nashville, TN</span></p>
+        </div>
+
+        <!-- Legal -->
+        <p style="margin-top:24px;padding-top:16px;border-top:1px solid #e5e7eb;font-size:11px;color:#9ca3af;line-height:1.6;">
+          By using Koemori you agree to our <a href="https://koemori.ai/terms" style="color:#15325a;">Terms of Service</a> and <a href="https://koemori.ai/privacy" style="color:#15325a;">Privacy Policy</a>, including that calls to your forwarded line are answered, recorded, and transcribed.
+        </p>
+      </div>
     </div>
   `;
 
   return sendEmail({
     to: client.owner_email,
-    subject: `Welcome to Koemori — your AI is ready`,
+    subject: `Your Koemori AI is ready — 3 steps to go live`,
     html,
   });
 }
