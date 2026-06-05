@@ -123,9 +123,41 @@ exports.handler = async (event) => {
       break;
     }
 
+    case "customer.subscription.updated": {
+      const sub = stripeEvent.data.object;
+      if (!sub.id) break;
+      let newStatus = null;
+      if (sub.status === "active" && !sub.pause_collection) newStatus = "active";
+      else if (sub.status === "active" && sub.pause_collection) newStatus = "paused";
+      else if (sub.status === "past_due") newStatus = "past_due";
+      else if (sub.cancel_at_period_end && sub.status === "active") newStatus = "canceling";
+      if (newStatus) {
+        await updateBySubscriptionId(sub.id, { payment_status: newStatus });
+      }
+      break;
+    }
+
     case "customer.subscription.deleted": {
       const sub = stripeEvent.data.object;
+      if (!sub.id) break;
+      // Look up the client first so we can clean up Retell resources
+      const { data: clientForCleanup } = await supabase
+        .from("clients")
+        .select("id, retell_agent_id, retell_phone_number")
+        .eq("stripe_subscription_id", sub.id)
+        .maybeSingle();
+
+      // Update status in Supabase
       await updateBySubscriptionId(sub.id, { payment_status: "canceled" });
+
+      // Release Retell phone + agent + LLM (best-effort, never block the webhook response)
+      if (clientForCleanup?.retell_agent_id || clientForCleanup?.retell_phone_number) {
+        deprovisionRetell({
+          retell_agent_id: clientForCleanup.retell_agent_id,
+          retell_phone_number: clientForCleanup.retell_phone_number,
+          apiKey: process.env.RETELL_API_KEY,
+        }).catch((e) => console.error("Retell cleanup error:", e.message));
+      }
       break;
     }
 
@@ -281,4 +313,32 @@ function escapeHtml(str) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+async function deprovisionRetell({ retell_agent_id, retell_phone_number, apiKey }) {
+  if (!apiKey) return;
+  const h = { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" };
+
+  if (retell_phone_number) {
+    await fetch(`https://api.retellai.com/delete-phone-number/${encodeURIComponent(retell_phone_number)}`, {
+      method: "DELETE", headers: h,
+    }).catch(() => {});
+  }
+
+  let llm_id = null;
+  if (retell_agent_id) {
+    try {
+      const r = await fetch(`https://api.retellai.com/get-agent/${retell_agent_id}`, { headers: h });
+      if (r.ok) llm_id = (await r.json())?.response_engine?.llm_id;
+    } catch {}
+    await fetch(`https://api.retellai.com/delete-agent/${retell_agent_id}`, {
+      method: "DELETE", headers: h,
+    }).catch(() => {});
+  }
+
+  if (llm_id) {
+    await fetch(`https://api.retellai.com/delete-retell-llm/${llm_id}`, {
+      method: "DELETE", headers: h,
+    }).catch(() => {});
+  }
 }

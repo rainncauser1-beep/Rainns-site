@@ -87,7 +87,7 @@ exports.handler = async (event) => {
       newStatus = "paused";
     } else if (action === "resume") {
       await stripe.subscriptions.update(client.stripe_subscription_id, {
-        pause_collection: "",
+        pause_collection: null,
       });
       newStatus = "active";
     } else if (action === "cancel") {

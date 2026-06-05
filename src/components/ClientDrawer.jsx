@@ -233,6 +233,31 @@ export default function ClientDrawer({ open, client, onClose, onSaved }) {
     if (!client?.id) return;
     setDeleting(true);
     try {
+      // Best-effort: release this client's Retell resources before deleting the
+      // row, so we never leak a billable phone number / agent / LLM. A Retell
+      // failure here must NOT block the row deletion.
+      if (client.retell_agent_id || client.retell_phone_number) {
+        try {
+          const sessionRes = await supabase?.auth.getSession();
+          const token = sessionRes?.data?.session?.access_token;
+          if (token) {
+            await fetch("/.netlify/functions/deprovision-agent", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({
+                retell_agent_id: client.retell_agent_id,
+                retell_phone_number: client.retell_phone_number,
+              }),
+            });
+          }
+        } catch (cleanupErr) {
+          console.error("Retell deprovision failed (continuing with delete):", cleanupErr);
+        }
+      }
+
       await deleteClient(client.id);
       onSaved?.(null);
       onClose();
