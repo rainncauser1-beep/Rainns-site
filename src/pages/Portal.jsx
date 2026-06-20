@@ -10,12 +10,13 @@ import {
 import { supabase } from "../lib/supabase";
 import RaindropMark from "../components/RaindropMark";
 import PortalAnalytics from "../components/PortalAnalytics";
+import { getVertical } from "../config/verticals";
 
 const EASE = [0.22, 1, 0.36, 1];
 
 // Forwarding instructions per major US carrier
 // Unconditional forward = all calls go to AI. Simple, always works.
-// Toggle on/off with the off code. Roofers use this when on job sites.
+// Toggle on/off with the off code. Pros use this when out on a job.
 const CARRIERS = [
   { name: "AT&T",     on: "**21*{n}#", off: "##21#", settings: false, zoom: false },
   { name: "T-Mobile", on: "**21*{n}#", off: "##21#", settings: false, zoom: false },
@@ -380,6 +381,7 @@ export default function Portal() {
   }
 
   const aiNumber = client.retell_phone_number;
+  const trade = getVertical(client?.vertical);
   const selectedCarrier = CARRIERS.find(c => c.name === carrier) || CARRIERS[0];
 
   return (
@@ -394,8 +396,14 @@ export default function Portal() {
             </span>
           </Link>
           <div className="flex items-center gap-3">
-            <span className="hidden sm:inline font-mono text-[11px] uppercase tracking-wider text-slate-500">
+            <span className="hidden sm:flex items-center gap-2 font-mono text-[11px] uppercase tracking-wider text-slate-500">
               {client.business_name}
+              {trade && (
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-900/[0.04] text-slate-600">
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: trade.accent }} />
+                  {trade.label}
+                </span>
+              )}
             </span>
             <button
               onClick={signOut}
@@ -587,7 +595,7 @@ export default function Portal() {
                   )}
 
                   <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 text-[13px] text-emerald-900 leading-relaxed">
-                    💡 <strong>How roofers use this:</strong> Turn AI ON when you head to a job site. Turn it OFF when you're back in the office. Your customers always call your same number — the AI just catches what you can't.
+                    💡 <strong>How {trade ? `${trade.label} pros` : "pros"} use this:</strong> Turn AI ON when you head out on a job. Turn it OFF when you're back in the office. Your customers always call your same number — the AI just catches what you can't.
                   </div>
                 </div>
               </div>

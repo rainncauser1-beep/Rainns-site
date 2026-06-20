@@ -46,8 +46,10 @@ function AnimatedRoutes() {
         <Route path="/marketing" element={<Layout><Marketing /></Layout>} />
         <Route path="/architecture" element={<Layout><Architecture /></Layout>} />
 
-        {/* Onboarding wizard — standalone, full-screen (no nav/footer) */}
+        {/* Onboarding wizard — standalone, full-screen (no nav/footer).
+            /:slug/onboarding prefills the trade from the page they came from. */}
         <Route path="/onboarding" element={<Onboarding />} />
+        <Route path="/:slug/onboarding" element={<Onboarding />} />
 
         {/* Blog + legal */}
         <Route path="/blog" element={<Blog />} />

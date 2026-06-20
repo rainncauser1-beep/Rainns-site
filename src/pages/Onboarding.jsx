@@ -1,22 +1,21 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowRight, ArrowLeft, Check, Calendar, Building2, Clock,
   MessageSquare, User, Loader2, Sparkles, Mic, ShieldCheck,
 } from "lucide-react";
 import CallDemoModal from "../components/CallDemoModal";
+import { VERTICALS, getVertical } from "../config/verticals";
+import { accentVars } from "../lib/accent";
 
 const EASE = [0.22, 1, 0.36, 1];
 const CAL_LINK = "https://cal.com/rainn/15-min-meeting";
 
-const INDUSTRIES = [
-  "Residential roofing", "Commercial roofing", "Storm & restoration",
-  "Repair & maintenance", "Mixed / full-service",
-];
-
 const inputCls =
   "w-full bg-cream-100 border border-slate-900/10 rounded-xl px-4 py-3.5 text-[15px] outline-none focus:border-rain-500 transition placeholder:text-slate-400 text-slate-800";
+
+const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
 const STEPS = [
   { id: "business", icon: Building2, title: "Your business", blurb: "The basics so we can brand your AI correctly." },
@@ -36,29 +35,39 @@ function Field({ label, hint, children }) {
 }
 
 export default function Onboarding() {
+  const { slug } = useParams();
+  const urlVertical = getVertical(slug);
+
   const [step, setStep] = useState(0);
   const [callOpen, setCallOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState("");
   const [form, setForm] = useState({
-    business_name: "", industry: "", website: "", business_phone: "",
+    vertical: urlVertical?.slug || "", business_name: "", industry: "", website: "", business_phone: "",
     business_hours: "", services: "",
     top_objections: "", brand_voice_notes: "", crm: "",
     owner_name: "", owner_email: "", owner_phone: "",
   });
 
+  const activeVertical = getVertical(form.vertical);
+  const accent = accentVars(activeVertical?.accent || "#15325a");
+  const tradeLabel = activeVertical?.label;
+  const specialties = activeVertical?.tradeOptions || [];
+
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  // Switching trade clears the specialty (it's a per-trade list).
+  const setVertical = (e) => setForm((f) => ({ ...f, vertical: e.target.value, industry: "" }));
 
   const canAdvance = () => {
-    if (step === 0) return form.business_name.trim().length > 0;
+    if (step === 0) return form.vertical.trim() && form.business_name.trim().length > 0;
     if (step === 3) return form.owner_name.trim() && (form.owner_email.trim() || form.owner_phone.trim());
     return true;
   };
 
   const next = () => {
     if (!canAdvance()) {
-      setError(step === 0 ? "Add your business name to continue." : "Add your name and an email or phone.");
+      setError(step === 0 ? "Pick your trade and add your business name to continue." : "Add your name and an email or phone.");
       return;
     }
     setError("");
@@ -92,7 +101,7 @@ export default function Onboarding() {
   // ---- Success screen ----
   if (done) {
     return (
-      <div className="min-h-screen bg-cream-100 flex items-center justify-center px-6 py-20">
+      <div className="min-h-screen bg-cream-100 flex items-center justify-center px-6 py-20" style={accent}>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -106,7 +115,8 @@ export default function Onboarding() {
             You're in, {form.owner_name.split(" ")[0] || "let's go"}.
           </h1>
           <p className="text-lg text-slate-600 leading-relaxed mb-4">
-            Everything about {form.business_name || "your business"} is saved.
+            Everything about {form.business_name || "your business"}
+            {tradeLabel ? <> (your {tradeLabel} line)</> : null} is saved.
             {form.owner_email && (
               <> We just emailed <strong>{form.owner_email}</strong> a link to your client portal so you can see your dashboard.</>
             )}
@@ -118,7 +128,8 @@ export default function Onboarding() {
             href={CAL_LINK}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 bg-slate-900 text-cream-100 px-8 py-4 rounded-full text-lg font-medium hover:bg-rain-700 transition"
+            className="inline-flex items-center gap-2 text-cream-100 px-8 py-4 rounded-full text-lg font-medium transition hover:brightness-110"
+            style={{ background: "var(--accent)" }}
           >
             <Calendar className="w-5 h-5" />
             Book your 15-min call
@@ -136,16 +147,17 @@ export default function Onboarding() {
   const progress = ((step + 1) / STEPS.length) * 100;
 
   return (
-    <div className="min-h-screen bg-cream-100 px-6 py-12 md:py-16">
+    <div className="min-h-screen bg-cream-100 px-6 py-12 md:py-16" style={accent}>
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 mb-5 px-3.5 py-1.5 bg-cream-50 border border-slate-900/10 rounded-full text-[11px] uppercase tracking-[0.18em] text-slate-600">
-            <Sparkles className="w-3 h-3 text-rain-500" />
-            Set up your AI · Takes 3 minutes
+            <Sparkles className="w-3 h-3" style={{ color: "var(--accent)" }} />
+            {tradeLabel ? `Set up your ${tradeLabel} AI` : "Set up your AI"} · Takes 3 minutes
           </div>
           <h1 className="font-display text-3xl md:text-4xl text-slate-900 tracking-tight leading-tight">
-            Let's build your receptionist.
+            Let's build your{" "}
+            {tradeLabel ? <span className="italic" style={{ color: "var(--accent)" }}>{tradeLabel}</span> : null} receptionist.
           </h1>
         </div>
 
@@ -163,7 +175,8 @@ export default function Onboarding() {
             <motion.div
               animate={{ width: `${progress}%` }}
               transition={{ duration: 0.5, ease: EASE }}
-              className="h-full bg-gradient-to-r from-rain-500 to-rain-700 rounded-full"
+              className="h-full rounded-full"
+              style={{ background: "linear-gradient(to right, var(--accent-light), var(--accent))" }}
             />
           </div>
         </div>
@@ -171,8 +184,8 @@ export default function Onboarding() {
         {/* Card */}
         <div className="bg-cream-50 border border-slate-900/8 rounded-3xl p-6 md:p-10">
           <div className="flex items-center gap-3 mb-7">
-            <div className="w-10 h-10 rounded-full bg-rain-100 flex items-center justify-center flex-shrink-0">
-              <StepIcon className="w-4.5 h-4.5 text-rain-700" />
+            <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "var(--accent-soft)" }}>
+              <StepIcon className="w-4.5 h-4.5" style={{ color: "var(--accent)" }} />
             </div>
             <div>
               <h2 className="font-display text-2xl text-slate-900 tracking-tight leading-tight">
@@ -193,17 +206,25 @@ export default function Onboarding() {
             >
               {step === 0 && (
                 <>
-                  <Field label="Business name *">
-                    <input className={inputCls} value={form.business_name} onChange={set("business_name")} placeholder="Apex Roofing" autoFocus />
-                  </Field>
-                  <Field label="Roofing focus">
-                    <select className={inputCls} value={form.industry} onChange={set("industry")}>
-                      <option value="">Select…</option>
-                      {INDUSTRIES.map((i) => <option key={i} value={i}>{i}</option>)}
+                  <Field label="Your trade *" hint={urlVertical ? "Prefilled from the page you came from — change it if needed." : "Pick the trade Koemori will answer calls for."}>
+                    <select className={inputCls} value={form.vertical} onChange={setVertical} autoFocus={!urlVertical}>
+                      <option value="">Select your trade…</option>
+                      {VERTICALS.map((v) => <option key={v.slug} value={v.slug}>{v.label}</option>)}
                     </select>
                   </Field>
+                  <Field label="Business name *">
+                    <input className={inputCls} value={form.business_name} onChange={set("business_name")} placeholder="Your business name" autoFocus={!!urlVertical} />
+                  </Field>
+                  {specialties.length > 0 && (
+                    <Field label={tradeLabel ? `${tradeLabel} focus` : "Service focus"}>
+                      <select className={inputCls} value={form.industry} onChange={set("industry")}>
+                        <option value="">Select…</option>
+                        {specialties.map((i) => <option key={i} value={i}>{cap(i)}</option>)}
+                      </select>
+                    </Field>
+                  )}
                   <Field label="Website">
-                    <input className={inputCls} value={form.website} onChange={set("website")} placeholder="apexroofing.com" />
+                    <input className={inputCls} value={form.website} onChange={set("website")} placeholder="yourbusiness.com" />
                   </Field>
                   <Field label="Business phone" hint="The number customers call today — the one we'll forward.">
                     <input type="tel" className={inputCls} value={form.business_phone} onChange={set("business_phone")} placeholder="(615) 555-0100" />
@@ -217,7 +238,7 @@ export default function Onboarding() {
                     <input className={inputCls} value={form.business_hours} onChange={set("business_hours")} placeholder="Mon–Fri 8am–6pm, Sat 9am–2pm" autoFocus />
                   </Field>
                   <Field label="Services you offer" hint="One per line or comma-separated. The more specific, the smarter the AI sounds.">
-                    <textarea className={`${inputCls} min-h-[120px] resize-y`} value={form.services} onChange={set("services")} placeholder={"Roof repair\nFull replacement\nGutter installation\nStorm damage inspection"} />
+                    <textarea className={`${inputCls} min-h-[120px] resize-y`} value={form.services} onChange={set("services")} placeholder={"Repairs\nInstallation\nMaintenance\nInspections"} />
                   </Field>
                   <Field label="CRM you use (optional)">
                     <input className={inputCls} value={form.crm} onChange={set("crm")} placeholder="GoHighLevel / HousecallPro / None" />
@@ -242,13 +263,13 @@ export default function Onboarding() {
                     <input className={inputCls} value={form.owner_name} onChange={set("owner_name")} placeholder="Jane Smith" autoFocus />
                   </Field>
                   <Field label="Email" hint="We'll send your AI number + portal access here.">
-                    <input type="email" className={inputCls} value={form.owner_email} onChange={set("owner_email")} placeholder="jane@apexroofing.com" />
+                    <input type="email" className={inputCls} value={form.owner_email} onChange={set("owner_email")} placeholder="you@yourbusiness.com" />
                   </Field>
                   <Field label="Mobile" hint="Where we reach you about new leads.">
                     <input type="tel" className={inputCls} value={form.owner_phone} onChange={set("owner_phone")} placeholder="(615) 555-0123" />
                   </Field>
                   <div className="flex items-start gap-2.5 text-[12px] text-slate-500 bg-cream-100 border border-slate-900/8 rounded-xl px-4 py-3">
-                    <ShieldCheck className="w-4 h-4 text-rain-600 mt-0.5 flex-shrink-0" />
+                    <ShieldCheck className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: "var(--accent)" }} />
                     We only use this to set up your AI and confirm your call. No spam, no sharing — ever.
                   </div>
                 </>
@@ -275,11 +296,11 @@ export default function Onboarding() {
             )}
 
             {step < STEPS.length - 1 ? (
-              <button onClick={next} className="inline-flex items-center gap-2 bg-slate-900 text-cream-100 px-6 py-3 rounded-full text-sm font-medium hover:bg-rain-700 transition">
+              <button onClick={next} className="inline-flex items-center gap-2 text-cream-100 px-6 py-3 rounded-full text-sm font-medium transition hover:brightness-110" style={{ background: "var(--accent)" }}>
                 Continue <ArrowRight className="w-4 h-4" />
               </button>
             ) : (
-              <button onClick={submit} disabled={submitting} className="inline-flex items-center gap-2 bg-slate-900 text-cream-100 px-6 py-3 rounded-full text-sm font-medium hover:bg-rain-700 transition disabled:opacity-50">
+              <button onClick={submit} disabled={submitting} className="inline-flex items-center gap-2 text-cream-100 px-6 py-3 rounded-full text-sm font-medium transition hover:brightness-110 disabled:opacity-50" style={{ background: "var(--accent)" }}>
                 {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Calendar className="w-4 h-4" />}
                 {submitting ? "Saving…" : "Finish & book my call"}
               </button>
@@ -289,13 +310,13 @@ export default function Onboarding() {
 
         <p className="text-center mt-6 text-[12px] text-slate-500">
           Prefer to just talk?{" "}
-          <a href={CAL_LINK} target="_blank" rel="noopener noreferrer" className="text-rain-700 hover:text-rain-600 font-medium transition">
+          <a href={CAL_LINK} target="_blank" rel="noopener noreferrer" className="font-medium transition" style={{ color: "var(--accent)" }}>
             Skip ahead and book a call
           </a>
         </p>
       </div>
 
-      <CallDemoModal open={callOpen} onClose={() => setCallOpen(false)} />
+      <CallDemoModal open={callOpen} onClose={() => setCallOpen(false)} tradeOptions={specialties.length ? specialties : undefined} />
     </div>
   );
 }

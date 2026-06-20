@@ -4,6 +4,7 @@ import { Plus, Search, Phone, RefreshCw, Users, PhoneCall, X, ChevronDown, Chevr
 import { STATUSES, CHECKLIST_STEPS, PAYMENT_STATUSES, listClients, checklistProgress } from "../lib/clients";
 import ClientDrawer from "./ClientDrawer";
 import { supabase } from "../lib/supabase";
+import { getVertical, VERTICALS } from "../config/verticals";
 
 const EASE = [0.22, 1, 0.36, 1];
 
@@ -29,6 +30,7 @@ function ClientCard({ client, onClick }) {
   const status = STATUSES.find((s) => s.id === client.status) ?? STATUSES[0];
   const tone = TONE[status.tone];
   const payBadge = PAYMENT_BADGE[client.payment_status];
+  const trade = getVertical(client.vertical);
 
   return (
     <motion.button
@@ -57,9 +59,19 @@ function ClientCard({ client, onClick }) {
         </div>
       </div>
 
-      {client.industry && (
-        <div className="font-mono text-[10px] uppercase tracking-wider text-slate-500 mb-3">
-          {client.industry}
+      {(trade || client.industry) && (
+        <div className="flex items-center gap-2 mb-3 flex-wrap">
+          {trade && (
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] uppercase tracking-wider font-medium bg-slate-900/[0.04]">
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: trade.accent }} />
+              <span className="text-slate-700">{trade.label}</span>
+            </span>
+          )}
+          {client.industry && (
+            <span className="font-mono text-[10px] uppercase tracking-wider text-slate-400 truncate">
+              {client.industry}
+            </span>
+          )}
         </div>
       )}
 
@@ -301,6 +313,7 @@ export default function ClientsManager() {
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [tradeFilter, setTradeFilter] = useState("all");
   const [drawer, setDrawer] = useState({ open: false, client: null });
   const [activity, setActivity] = useState(null);
 
@@ -313,14 +326,18 @@ export default function ClientsManager() {
   useEffect(() => { fetch(); }, []);
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return clients;
-    const q = search.toLowerCase();
-    return clients.filter((c) =>
-      [c.business_name, c.owner_name, c.industry, c.owner_email, c.owner_phone]
-        .filter(Boolean)
-        .some((v) => v.toLowerCase().includes(q))
-    );
-  }, [clients, search]);
+    let list = clients;
+    if (tradeFilter !== "all") list = list.filter((c) => c.vertical === tradeFilter);
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter((c) =>
+        [c.business_name, c.owner_name, c.industry, c.vertical, getVertical(c.vertical)?.label, c.owner_email, c.owner_phone]
+          .filter(Boolean)
+          .some((v) => v.toLowerCase().includes(q))
+      );
+    }
+    return list;
+  }, [clients, search, tradeFilter]);
 
   const grouped = useMemo(() => {
     const map = Object.fromEntries(STATUSES.map((s) => [s.id, []]));
@@ -347,6 +364,15 @@ export default function ClientsManager() {
               className="w-full pl-10 pr-4 py-2.5 bg-cream-50 border border-slate-900/10 rounded-full text-sm outline-none focus:border-rain-500 transition placeholder:text-slate-400 text-slate-800"
             />
           </div>
+          <select
+            value={tradeFilter}
+            onChange={(e) => setTradeFilter(e.target.value)}
+            className="py-2.5 px-3 bg-cream-50 border border-slate-900/10 rounded-full text-sm outline-none focus:border-rain-500 transition text-slate-700 flex-shrink-0"
+            title="Filter by trade"
+          >
+            <option value="all">All trades</option>
+            {VERTICALS.map((v) => <option key={v.slug} value={v.slug}>{v.label}</option>)}
+          </select>
           <button
             onClick={fetch}
             className="w-10 h-10 rounded-full bg-cream-50 border border-slate-900/10 hover:border-slate-900/25 flex items-center justify-center transition flex-shrink-0"

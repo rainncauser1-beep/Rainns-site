@@ -31,7 +31,10 @@ function Nav() {
   const [user, setUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const location = useLocation();
-  const navLinks = getNavLinks(verticalFromPath(location.pathname));
+  const active = verticalFromPath(location.pathname);
+  const navLinks = getNavLinks(active);
+  // Carry the trade into onboarding so signups land on their vertical.
+  const onboardingPath = active ? `/${active.slug}/onboarding` : "/onboarding";
   const ADMIN_EMAIL = "rainn.causer1@gmail.com";
 
   useEffect(() => {
@@ -130,7 +133,7 @@ function Nav() {
               </Link>
             )}
             <Link
-              to="/onboarding"
+              to={onboardingPath}
               className="hidden md:inline-flex items-center gap-1.5 bg-rain-700 text-cream-100 px-4 py-2 rounded-full text-[13px] font-medium hover:bg-rain-600 transition"
             >
               Book a Call
@@ -207,7 +210,7 @@ function Nav() {
                 </Link>
               )}
               <Link
-                to="/onboarding"
+                to={onboardingPath}
                 className="flex items-center justify-center gap-2 bg-slate-900 text-cream-100 py-4 rounded-full font-medium"
               >
                 Book a Call

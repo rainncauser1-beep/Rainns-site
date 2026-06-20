@@ -31,6 +31,10 @@ const META = {
       caller: "I've got water coming through my ceiling after last night's storm",
       outcome: "Booked an emergency inspection.",
     },
+    tradeOptions: [
+      "residential roofing", "commercial roofing", "storm & restoration",
+      "repair & maintenance", "mixed / full-service",
+    ],
   },
   lawncare:        { label: "Lawn Care",        navLabel: "Lawn Care",     icon: Sprout,      featured: true, accent: "#4f8a3f" },
   pressurewashing: { label: "Pressure Washing", navLabel: "Pressure Wash", icon: Droplets,                    accent: "#2d7d8f" },
@@ -69,6 +73,8 @@ export const VERTICALS = ORDER.map((slug) => {
     card: meta.card || content?.card || null,
     // Live-call example for the /services directory cards.
     example: meta.example || content?.example || null,
+    // Specialty options for onboarding / admin (per-trade focus list).
+    tradeOptions: meta.tradeOptions || content?.tradeOptions || [],
     content,
   };
 });

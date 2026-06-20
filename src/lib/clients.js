@@ -36,6 +36,7 @@ export function emptyClient() {
     owner_email: "",
     owner_phone: "",
     business_phone: "",
+    vertical: "",
     industry: "",
     website: "",
     business_hours: "",

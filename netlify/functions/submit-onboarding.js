@@ -20,7 +20,7 @@ const DEFAULT_FROM = "Koemori <hello@koemori.ai>";
 // Only these fields are accepted from the public form
 const ALLOWED = new Set([
   "business_name", "owner_name", "owner_email", "owner_phone",
-  "business_phone", "industry", "website", "business_hours",
+  "business_phone", "vertical", "industry", "website", "business_hours",
   "services", "top_objections", "brand_voice_notes", "crm",
 ]);
 
@@ -141,6 +141,7 @@ async function notifyOwner(record) {
         ${row("Owner", record.owner_name)}
         ${row("Email", record.owner_email)}
         ${row("Phone", record.owner_phone)}
+        ${row("Trade", record.vertical)}
         ${row("Industry", record.industry)}
         ${row("Business phone", record.business_phone)}
         ${row("Website", record.website)}

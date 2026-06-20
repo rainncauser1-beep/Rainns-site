@@ -7,13 +7,9 @@ import {
 } from "lucide-react";
 import { STATUSES, CHECKLIST_STEPS, PAYMENT_STATUSES, emptyClient, saveClient, deleteClient } from "../lib/clients";
 import { supabase } from "../lib/supabase";
+import { VERTICALS } from "../config/verticals";
 
 const EASE = [0.22, 1, 0.36, 1];
-
-const INDUSTRIES = [
-  "Roofing", "HVAC", "Plumbing", "Electrical", "Med Spa",
-  "Auto Detailing", "Landscaping", "Pest Control", "Locksmith", "Other",
-];
 
 function Field({ label, children, hint, full = false }) {
   return (
@@ -120,6 +116,7 @@ export default function ClientDrawer({ open, client, onClose, onSaved }) {
         body: JSON.stringify({
           business_name: form.business_name,
           agent_display_name: form.agent_display_name || undefined,
+          vertical: form.vertical || undefined,
           industry: form.industry,
           website: form.website,
           business_phone: form.business_phone,
@@ -361,11 +358,14 @@ export default function ClientDrawer({ open, client, onClose, onSaved }) {
                   <Field label="Business name *">
                     <input className={inputCls} value={form.business_name} onChange={update("business_name")} placeholder="Apex Roofing" />
                   </Field>
-                  <Field label="Industry">
-                    <select className={inputCls} value={form.industry} onChange={update("industry")}>
+                  <Field label="Trade" hint="Which vertical this account belongs to">
+                    <select className={inputCls} value={form.vertical || ""} onChange={update("vertical")}>
                       <option value="">Select…</option>
-                      {INDUSTRIES.map((i) => <option key={i} value={i}>{i}</option>)}
+                      {VERTICALS.map((v) => <option key={v.slug} value={v.slug}>{v.label}</option>)}
                     </select>
+                  </Field>
+                  <Field label="Specialty" hint="Optional focus within the trade">
+                    <input className={inputCls} value={form.industry} onChange={update("industry")} placeholder="e.g. Residential, Commercial, Emergency" />
                   </Field>
                   <Field label="Owner name">
                     <input className={inputCls} value={form.owner_name} onChange={update("owner_name")} placeholder="Jane Smith" />
