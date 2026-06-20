@@ -12,15 +12,7 @@ const { BACKEND_VERTICALS, buildDemoPrompt, DEMO_GREETING } = require("./lib/age
 
 const ADMIN_EMAIL = "rainn.causer1@gmail.com";
 
-function verifySupabaseJwt(token) {
-  const parts = token.split(".");
-  if (parts.length !== 3) return null;
-  try {
-    return JSON.parse(Buffer.from(parts[1], "base64").toString("utf8"));
-  } catch {
-    return null;
-  }
-}
+const { getVerifiedUser } = require("./lib/auth");
 
 async function retell(path, apiKey, method, payload) {
   const res = await fetch(`https://api.retellai.com${path}`, {
@@ -91,10 +83,9 @@ exports.handler = async (event) => {
   // Auth
   const auth = event.headers.authorization || event.headers.Authorization || "";
   if (!auth.startsWith("Bearer ")) return { statusCode: 401, body: JSON.stringify({ error: "Missing bearer token" }) };
-  const payload = verifySupabaseJwt(auth.slice(7));
-  if (!payload) return { statusCode: 401, body: JSON.stringify({ error: "Invalid token" }) };
-  if (payload.email !== ADMIN_EMAIL) return { statusCode: 403, body: JSON.stringify({ error: "Forbidden" }) };
-  if (payload.exp && payload.exp * 1000 < Date.now()) return { statusCode: 401, body: JSON.stringify({ error: "Token expired" }) };
+  const user = await getVerifiedUser(auth.slice(7));
+  if (!user) return { statusCode: 401, body: JSON.stringify({ error: "Invalid token" }) };
+  if (user.email !== ADMIN_EMAIL) return { statusCode: 403, body: JSON.stringify({ error: "Forbidden" }) };
 
   const apiKey = process.env.RETELL_API_KEY;
   if (!apiKey) return { statusCode: 500, body: JSON.stringify({ error: "RETELL_API_KEY not configured" }) };

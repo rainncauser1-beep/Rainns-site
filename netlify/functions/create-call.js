@@ -35,6 +35,14 @@ exports.handler = async (event) => {
     // No/invalid body — fall back to the generic demo
   }
 
+  // Require a real email. The demo UI always collects one before calling; this
+  // closes the "omit email to skip the per-email cap" bypass.
+  if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    return { statusCode: 400, body: JSON.stringify({ error: "A valid email is required" }) };
+  }
+  const ip = String(event.headers["x-nf-client-connection-ip"] || event.headers["x-forwarded-for"] || "")
+    .split(",")[0].trim();
+
   // Single Supabase client for the demo-limit check + agent routing (best-effort).
   let sb = null;
   try {
@@ -55,6 +63,25 @@ exports.handler = async (event) => {
       }
     } catch {
       // Supabase unavailable — allow the call rather than block legitimate users
+    }
+  }
+
+  // Per-IP daily backstop — catches email-cycling abuse from one machine.
+  // Graceful: if the demo_ip_usage table isn't created yet, skip IP limiting.
+  const IP_DAILY_CAP = 20;
+  if (ip && sb) {
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const { data: ipRow } = await sb.from("demo_ip_usage").select("count").eq("ip", ip).eq("day", today).maybeSingle();
+      if (ipRow && ipRow.count >= IP_DAILY_CAP) {
+        return { statusCode: 429, body: JSON.stringify({ error: "Daily demo limit reached for your network. Try again tomorrow." }) };
+      }
+      await sb.from("demo_ip_usage").upsert(
+        { ip, day: today, count: (ipRow?.count || 0) + 1, updated_at: new Date().toISOString() },
+        { onConflict: "ip,day" }
+      );
+    } catch {
+      // demo_ip_usage table not created yet — skip IP limiting
     }
   }
 

@@ -273,7 +273,7 @@ function Footer() {
             </div>
             <ul className="space-y-2 text-sm text-slate-600">
               <li>
-                <Link to="/" className="hover:text-slate-900 transition">
+                <Link to="/services" className="hover:text-slate-900 transition">
                   All Trades
                 </Link>
               </li>

@@ -6,12 +6,7 @@ const { createClient } = require("@supabase/supabase-js");
 
 const ADMIN_EMAIL = "rainn.causer1@gmail.com";
 
-function verifyJwt(token) {
-  const parts = token.split(".");
-  if (parts.length !== 3) return null;
-  try { return JSON.parse(Buffer.from(parts[1], "base64").toString("utf8")); }
-  catch { return null; }
-}
+const { getVerifiedUser } = require("./lib/auth");
 
 exports.handler = async (event) => {
   if (event.httpMethod !== "GET") {
@@ -22,12 +17,9 @@ exports.handler = async (event) => {
   if (!auth.startsWith("Bearer ")) {
     return { statusCode: 401, body: JSON.stringify({ error: "Missing token" }) };
   }
-  const jwt = verifyJwt(auth.slice(7));
-  if (!jwt || jwt.email !== ADMIN_EMAIL) {
+  const user = await getVerifiedUser(auth.slice(7));
+  if (!user || user.email !== ADMIN_EMAIL) {
     return { statusCode: 403, body: JSON.stringify({ error: "Forbidden" }) };
-  }
-  if (jwt.exp && jwt.exp * 1000 < Date.now()) {
-    return { statusCode: 401, body: JSON.stringify({ error: "Token expired" }) };
   }
 
   const supabase = createClient(

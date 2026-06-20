@@ -10,18 +10,10 @@
 // feed it to the AI so the agent actually knows the business.
 
 const crypto = require("crypto");
-const { buildPrompt, postCallFields } = require("./lib/agent-prompt");
+const { buildPrompt, postCallFields, bookingTool } = require("./lib/agent-prompt");
 const ADMIN_EMAIL = "rainn.causer1@gmail.com";
 
-function verifySupabaseJwt(token) {
-  const parts = token.split(".");
-  if (parts.length !== 3) return null;
-  try {
-    return JSON.parse(Buffer.from(parts[1], "base64").toString("utf8"));
-  } catch {
-    return null;
-  }
-}
+const { getVerifiedUser } = require("./lib/auth");
 
 // Best-effort: fetch a website and extract readable text for agent context.
 async function fetchWebsiteContext(url) {
@@ -113,15 +105,12 @@ exports.handler = async (event) => {
     return { statusCode: 401, body: JSON.stringify({ error: "Missing bearer token" }) };
   }
   const token = auth.slice(7);
-  const payload = verifySupabaseJwt(token);
-  if (!payload) {
+  const user = await getVerifiedUser(token);
+  if (!user) {
     return { statusCode: 401, body: JSON.stringify({ error: "Invalid token" }) };
   }
-  if (payload.email !== ADMIN_EMAIL) {
+  if (user.email !== ADMIN_EMAIL) {
     return { statusCode: 403, body: JSON.stringify({ error: "Forbidden" }) };
-  }
-  if (payload.exp && payload.exp * 1000 < Date.now()) {
-    return { statusCode: 401, body: JSON.stringify({ error: "Token expired" }) };
   }
 
   // --- Validate input ---
@@ -168,37 +157,12 @@ exports.handler = async (event) => {
     }
   }
 
-  const bookingEnabled = Boolean(effectiveEventTypeId);
+  const bookingEnabled = Boolean(effectiveEventTypeId) || Boolean(body.jobnimbus_api_key);
   const generalPrompt = buildPrompt(body, { websiteContext, bookingEnabled });
 
   // When booking is enabled, give the LLM a tool to check availability + book
   const siteUrlForTool = process.env.URL || "https://koemori.ai";
-  const generalTools = bookingEnabled
-    ? [
-        {
-          type: "custom",
-          name: "manage_booking",
-          description:
-            "Check real calendar availability and book an estimate appointment. Use action='check_availability' with a date to get open times, then action='book' with the chosen ISO start_time to book it.",
-          url: `${siteUrlForTool}/.netlify/functions/book-appointment`,
-          speak_during_execution: true,
-          speak_after_execution: true,
-          execution_message_description: "Let me check the calendar real quick…",
-          parameters: {
-            type: "object",
-            properties: {
-              action: { type: "string", enum: ["check_availability", "book"], description: "check_availability to list open times, book to reserve one" },
-              date: { type: "string", description: "Date to check availability for, in YYYY-MM-DD" },
-              start_time: { type: "string", description: "Exact ISO 8601 start time to book (from the open times returned)" },
-              caller_name: { type: "string", description: "Caller's full name" },
-              caller_phone: { type: "string", description: "Caller's callback number" },
-              caller_email: { type: "string", description: "Caller's email if provided" },
-            },
-            required: ["action"],
-          },
-        },
-      ]
-    : undefined;
+  const generalTools = bookingEnabled ? [bookingTool(siteUrlForTool)] : undefined;
 
   // ============================================================
   // UPDATE PATH — client already has an agent: refresh its prompt

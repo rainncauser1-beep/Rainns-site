@@ -316,7 +316,7 @@ export default function Onboarding() {
         </p>
       </div>
 
-      <CallDemoModal open={callOpen} onClose={() => setCallOpen(false)} tradeOptions={specialties.length ? specialties : undefined} />
+      <CallDemoModal open={callOpen} onClose={() => setCallOpen(false)} tradeOptions={specialties.length ? specialties : undefined} vertical={form.vertical || undefined} />
     </div>
   );
 }

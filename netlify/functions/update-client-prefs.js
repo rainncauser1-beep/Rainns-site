@@ -7,17 +7,9 @@
 // time, so no extra step needed there.
 
 const { createClient } = require("@supabase/supabase-js");
-const { buildPrompt } = require("./lib/agent-prompt");
+const { buildPrompt, bookingTool } = require("./lib/agent-prompt");
 
-function verifySupabaseJwt(token) {
-  const parts = token.split(".");
-  if (parts.length !== 3) return null;
-  try {
-    return JSON.parse(Buffer.from(parts[1], "base64").toString("utf8"));
-  } catch {
-    return null;
-  }
-}
+const { getVerifiedUser } = require("./lib/auth");
 
 // Fields a portal user is allowed to edit on their own row
 const ALLOWED_FIELDS = new Set([
@@ -42,10 +34,8 @@ exports.handler = async (event) => {
   }
   const token = auth.slice(7);
 
-  const jwt = verifySupabaseJwt(token);
-  if (!jwt) return { statusCode: 401, body: JSON.stringify({ error: "Invalid token" }) };
-  if (!jwt.email) return { statusCode: 401, body: JSON.stringify({ error: "Token missing email" }) };
-  if (jwt.exp && jwt.exp * 1000 < Date.now()) return { statusCode: 401, body: JSON.stringify({ error: "Token expired" }) };
+  const user = await getVerifiedUser(token);
+  if (!user) return { statusCode: 401, body: JSON.stringify({ error: "Invalid token" }) };
 
   let body;
   try {
@@ -74,7 +64,7 @@ exports.handler = async (event) => {
   const { data, error } = await supabase
     .from("clients")
     .update(updates)
-    .eq("owner_email", jwt.email)
+    .eq("owner_email", user.email)
     .select("*")
     .maybeSingle();
 
@@ -104,6 +94,7 @@ exports.handler = async (event) => {
           const bookingEnabled = Boolean(data.cal_event_type_id) || Boolean(data.jobnimbus_api_key);
           const newPrompt = buildPrompt(data, { bookingEnabled });
           const beginMessage = `Hi, this is ${data.agent_display_name || "Ava"} with ${data.business_name}. How can I help you today?`;
+          const siteUrl = process.env.URL || "https://koemori.ai";
 
           const patchRes = await fetch(`https://api.retellai.com/update-retell-llm/${llmId}`, {
             method: "PATCH",
@@ -114,6 +105,10 @@ exports.handler = async (event) => {
             body: JSON.stringify({
               general_prompt: newPrompt,
               begin_message: beginMessage,
+              // Register (or clear) the booking tool so it matches the prompt.
+              // This is what makes JobNimbus (portal-connected) booking work —
+              // previously the prompt referenced a tool that was never attached.
+              general_tools: bookingEnabled ? [bookingTool(siteUrl)] : [],
             }),
           });
           agentUpdated = patchRes.ok;

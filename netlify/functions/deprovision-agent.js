@@ -6,15 +6,7 @@
 const crypto = require("crypto");
 const ADMIN_EMAIL = "rainn.causer1@gmail.com";
 
-function verifySupabaseJwt(token) {
-  const parts = token.split(".");
-  if (parts.length !== 3) return null;
-  try {
-    return JSON.parse(Buffer.from(parts[1], "base64").toString("utf8"));
-  } catch {
-    return null;
-  }
-}
+const { getVerifiedUser } = require("./lib/auth");
 
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {
@@ -26,15 +18,12 @@ exports.handler = async (event) => {
     return { statusCode: 401, body: JSON.stringify({ error: "Missing bearer token" }) };
   }
   const token = auth.slice(7);
-  const payload = verifySupabaseJwt(token);
-  if (!payload) {
+  const user = await getVerifiedUser(token);
+  if (!user) {
     return { statusCode: 401, body: JSON.stringify({ error: "Invalid token" }) };
   }
-  if (payload.email !== ADMIN_EMAIL) {
+  if (user.email !== ADMIN_EMAIL) {
     return { statusCode: 403, body: JSON.stringify({ error: "Forbidden" }) };
-  }
-  if (payload.exp && payload.exp * 1000 < Date.now()) {
-    return { statusCode: 401, body: JSON.stringify({ error: "Token expired" }) };
   }
 
   let body;

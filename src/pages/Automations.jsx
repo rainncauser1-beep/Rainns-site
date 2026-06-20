@@ -257,7 +257,7 @@ export default function Automations() {
       <GuaranteeBand />
 
       <ContactSection />
-      <CallDemoModal open={callOpen} onClose={() => setCallOpen(false)} />
+      <CallDemoModal open={callOpen} onClose={() => setCallOpen(false)} vertical="roofing" />
     </>
   );
 }

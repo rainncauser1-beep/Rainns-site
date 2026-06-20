@@ -346,7 +346,7 @@ export default function GetStarted() {
       </section>
 
       <ContactSection />
-      <CallDemoModal open={callOpen} onClose={() => setCallOpen(false)} />
+      <CallDemoModal open={callOpen} onClose={() => setCallOpen(false)} vertical="roofing" />
     </>
   );
 }

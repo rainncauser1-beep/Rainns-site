@@ -253,4 +253,33 @@ function buildDemoPrompt(verticalSlug) {
   return lines.join("\n");
 }
 
-module.exports = { BACKEND_VERTICALS, getBackendVertical, buildPrompt, postCallFields, buildDemoPrompt, DEMO_GREETING };
+// The manage_booking tool the Retell LLM uses to check availability + book.
+// Shared so provision-agent (create/update) AND update-client-prefs (portal
+// self-edits, incl. JobNimbus) register the SAME tool — previously the portal
+// path emitted the "use manage_booking" prompt without ever attaching the tool.
+function bookingTool(siteUrl) {
+  return {
+    type: "custom",
+    name: "manage_booking",
+    description:
+      "Check real calendar availability and book an estimate appointment. Use action='check_availability' with a date to get open times, then action='book' with the chosen ISO start_time to book it.",
+    url: `${siteUrl}/.netlify/functions/book-appointment`,
+    speak_during_execution: true,
+    speak_after_execution: true,
+    execution_message_description: "Let me check the calendar real quick…",
+    parameters: {
+      type: "object",
+      properties: {
+        action: { type: "string", enum: ["check_availability", "book"], description: "check_availability to list open times, book to reserve one" },
+        date: { type: "string", description: "Date to check availability for, in YYYY-MM-DD" },
+        start_time: { type: "string", description: "Exact ISO 8601 start time to book (from the open times returned)" },
+        caller_name: { type: "string", description: "Caller's full name" },
+        caller_phone: { type: "string", description: "Caller's callback number" },
+        caller_email: { type: "string", description: "Caller's email if provided" },
+      },
+      required: ["action"],
+    },
+  };
+}
+
+module.exports = { BACKEND_VERTICALS, getBackendVertical, buildPrompt, postCallFields, buildDemoPrompt, DEMO_GREETING, bookingTool };

@@ -600,7 +600,7 @@ export default function Home() {
         service={waitlist.service}
         onClose={() => setWaitlist({ open: false, service: null })}
       />
-      <CallDemoModal open={callOpen} onClose={() => setCallOpen(false)} />
+      <CallDemoModal open={callOpen} onClose={() => setCallOpen(false)} vertical="roofing" />
     </>
   );
 }

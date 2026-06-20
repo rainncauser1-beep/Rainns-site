@@ -11,15 +11,7 @@ const crypto = require("crypto");
 const Stripe = require("stripe");
 const { createClient } = require("@supabase/supabase-js");
 
-function verifySupabaseJwt(token) {
-  const parts = token.split(".");
-  if (parts.length !== 3) return null;
-  try {
-    return JSON.parse(Buffer.from(parts[1], "base64").toString("utf8"));
-  } catch {
-    return null;
-  }
-}
+const { getVerifiedUser } = require("./lib/auth");
 
 const ACTIONS = new Set(["pause", "resume", "cancel"]);
 
@@ -35,15 +27,9 @@ exports.handler = async (event) => {
   }
   const token = auth.slice(7);
 
-  const jwt = verifySupabaseJwt(token);
-  if (!jwt) {
+  const user = await getVerifiedUser(token);
+  if (!user) {
     return { statusCode: 401, body: JSON.stringify({ error: "Invalid token" }) };
-  }
-  if (!jwt.email) {
-    return { statusCode: 401, body: JSON.stringify({ error: "Token missing email" }) };
-  }
-  if (jwt.exp && jwt.exp * 1000 < Date.now()) {
-    return { statusCode: 401, body: JSON.stringify({ error: "Token expired" }) };
   }
 
   // Parse + validate action
@@ -72,7 +58,7 @@ exports.handler = async (event) => {
   const { data: client, error: lookupErr } = await supabase
     .from("clients")
     .select("id, stripe_subscription_id, payment_status")
-    .eq("owner_email", jwt.email)
+    .eq("owner_email", user.email)
     .maybeSingle();
 
   if (lookupErr) {

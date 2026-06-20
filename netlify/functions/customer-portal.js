@@ -5,15 +5,7 @@
 const Stripe = require("stripe");
 const { createClient } = require("@supabase/supabase-js");
 
-function verifySupabaseJwt(token) {
-  const parts = token.split(".");
-  if (parts.length !== 3) return null;
-  try {
-    return JSON.parse(Buffer.from(parts[1], "base64").toString("utf8"));
-  } catch {
-    return null;
-  }
-}
+const { getVerifiedUser } = require("./lib/auth");
 
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {
@@ -25,12 +17,9 @@ exports.handler = async (event) => {
     return { statusCode: 401, body: JSON.stringify({ error: "Missing token" }) };
   }
 
-  const jwtPayload = verifySupabaseJwt(auth.slice(7));
-  if (!jwtPayload) {
+  const user = await getVerifiedUser(auth.slice(7));
+  if (!user) {
     return { statusCode: 401, body: JSON.stringify({ error: "Invalid token" }) };
-  }
-  if (jwtPayload.exp && jwtPayload.exp * 1000 < Date.now()) {
-    return { statusCode: 401, body: JSON.stringify({ error: "Token expired" }) };
   }
 
   const supabase = createClient(
@@ -42,7 +31,7 @@ exports.handler = async (event) => {
   const { data: client, error } = await supabase
     .from("clients")
     .select("id, stripe_customer_id, business_name")
-    .eq("owner_email", jwtPayload.email)
+    .eq("owner_email", user.email)
     .maybeSingle();
 
   if (error || !client) {

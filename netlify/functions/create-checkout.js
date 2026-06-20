@@ -12,15 +12,7 @@ const Stripe = require("stripe");
 
 const ADMIN_EMAIL = "rainn.causer1@gmail.com";
 
-function verifySupabaseJwt(token) {
-  const parts = token.split(".");
-  if (parts.length !== 3) return null;
-  try {
-    return JSON.parse(Buffer.from(parts[1], "base64").toString("utf8"));
-  } catch {
-    return null;
-  }
-}
+const { getVerifiedUser } = require("./lib/auth");
 
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {
@@ -45,15 +37,12 @@ exports.handler = async (event) => {
   }
   const token = auth.slice(7);
 
-  const jwtPayload = verifySupabaseJwt(token);
-  if (!jwtPayload) {
+  const user = await getVerifiedUser(token);
+  if (!user) {
     return { statusCode: 401, body: JSON.stringify({ error: "Invalid token" }) };
   }
-  if (jwtPayload.exp && jwtPayload.exp * 1000 < Date.now()) {
-    return { statusCode: 401, body: JSON.stringify({ error: "Token expired" }) };
-  }
-  const isAdmin = jwtPayload.email === ADMIN_EMAIL;
-  const isClientYearlyUpgrade = isYearly && jwtPayload.email && !isAdmin;
+  const isAdmin = user.email === ADMIN_EMAIL;
+  const isClientYearlyUpgrade = isYearly && user.email && !isAdmin;
   if (!isAdmin && !isClientYearlyUpgrade) {
     return { statusCode: 403, body: JSON.stringify({ error: "Forbidden" }) };
   }
