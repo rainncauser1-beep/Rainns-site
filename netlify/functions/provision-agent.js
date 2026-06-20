@@ -157,8 +157,20 @@ exports.handler = async (event) => {
     }
   }
 
-  const bookingEnabled = Boolean(effectiveEventTypeId) || Boolean(body.jobnimbus_api_key);
-  const generalPrompt = buildPrompt(body, { websiteContext, bookingEnabled });
+  // A portal-connected JobNimbus key lives only in Supabase (the admin form
+  // doesn't carry it), so on re-provision fetch it by agent id — otherwise an
+  // admin update would strip a client's JobNimbus booking (tool + prompt).
+  let jobnimbusKey = body.jobnimbus_api_key || null;
+  if (!jobnimbusKey && body.retell_agent_id && process.env.VITE_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    try {
+      const { createClient } = require("@supabase/supabase-js");
+      const sb = createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+      const { data: row } = await sb.from("clients").select("jobnimbus_api_key").eq("retell_agent_id", body.retell_agent_id).maybeSingle();
+      if (row && row.jobnimbus_api_key) jobnimbusKey = row.jobnimbus_api_key;
+    } catch { /* best-effort — fall back to Cal.com booking only */ }
+  }
+  const bookingEnabled = Boolean(effectiveEventTypeId) || Boolean(jobnimbusKey);
+  const generalPrompt = buildPrompt({ ...body, jobnimbus_api_key: jobnimbusKey }, { websiteContext, bookingEnabled });
 
   // When booking is enabled, give the LLM a tool to check availability + book
   const siteUrlForTool = process.env.URL || "https://koemori.ai";

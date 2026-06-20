@@ -304,7 +304,7 @@ async function handleJobNimbus({ client, action, args }) {
   }
 
   const friendlyBooked = rawTime
-    ? friendlyTime(rawTime, "America/Chicago")
+    ? friendlyTime(rawTime, client.cal_timezone || "America/Chicago")
     : "the requested time";
 
   return reply(

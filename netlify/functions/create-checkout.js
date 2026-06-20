@@ -13,6 +13,7 @@ const Stripe = require("stripe");
 const ADMIN_EMAIL = "rainn.causer1@gmail.com";
 
 const { getVerifiedUser } = require("./lib/auth");
+const { createClient } = require("@supabase/supabase-js");
 
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {
@@ -53,8 +54,37 @@ exports.handler = async (event) => {
   const trialDays = Number(trial_days);
   const hasTrial = Number.isFinite(trialDays) && trialDays > 0;
 
-  const setupDollars = Number(setup_amount);
-  const monthlyDollars = Number(monthly_amount);
+  // Identity + price. Admin may quote any client/amount. A non-admin self-upgrade
+  // is bound to the caller's OWN row with the price derived server-side, so a
+  // signed-in client can't check out as another client or at an arbitrary price.
+  let effClientId = client_id;
+  let effEmail = client_email;
+  let effName = client_name;
+  let setupDollars = Number(setup_amount);
+  let monthlyDollars = Number(monthly_amount);
+  if (!isAdmin) {
+    if (!process.env.VITE_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      return { statusCode: 500, body: JSON.stringify({ error: "Server not configured" }) };
+    }
+    const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+    const { data: row } = await supabase
+      .from("clients")
+      .select("id, business_name, owner_email, monthly_recurring")
+      .eq("owner_email", user.email)
+      .maybeSingle();
+    if (!row) {
+      return { statusCode: 403, body: JSON.stringify({ error: "No client account for this user" }) };
+    }
+    if (!row.monthly_recurring || Number(row.monthly_recurring) <= 0) {
+      return { statusCode: 400, body: JSON.stringify({ error: "No monthly price on file — contact support to upgrade." }) };
+    }
+    effClientId = row.id;
+    effEmail = row.owner_email;
+    effName = row.business_name;
+    monthlyDollars = Number(row.monthly_recurring);
+    setupDollars = 0; // no setup fee on a self-serve upgrade
+  }
+
   if (!Number.isFinite(monthlyDollars) || monthlyDollars <= 0) {
     return { statusCode: 400, body: JSON.stringify({ error: "monthly_amount must be a positive number" }) };
   }
@@ -68,7 +98,7 @@ exports.handler = async (event) => {
   }
 
   const appUrl = process.env.URL || "https://koemori.ai";
-  const businessLabel = client_name || "Koemori Client";
+  const businessLabel = effName || "Koemori Client";
 
   try {
     const stripe = Stripe(stripeKey);
@@ -104,7 +134,7 @@ exports.handler = async (event) => {
     }
 
     const subscriptionData = {
-      metadata: { client_id, client_name: businessLabel },
+      metadata: { client_id: effClientId, client_name: businessLabel },
     };
     // A free trial delays the first MONTHLY charge by N days. The setup fee
     // (a one-time line item) still bills immediately at checkout.
@@ -114,7 +144,7 @@ exports.handler = async (event) => {
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
-      ...(client_email ? { customer_email: client_email } : {}),
+      ...(effEmail ? { customer_email: effEmail } : {}),
       line_items: lineItems,
       subscription_data: subscriptionData,
       // Require the client to accept our Terms of Service before paying.
@@ -123,7 +153,7 @@ exports.handler = async (event) => {
       // (Settings → Public business details / Checkout) or the API will error.
       consent_collection: { terms_of_service: "required" },
       metadata: {
-        client_id,
+        client_id: effClientId,
         client_name: businessLabel,
         setup_amount: String(setupDollars),
         monthly_amount: String(monthlyDollars),
