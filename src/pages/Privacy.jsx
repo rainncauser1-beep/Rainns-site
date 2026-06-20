@@ -95,7 +95,7 @@ export default function Privacy() {
         <H>8. Your Choices & Rights</H>
         <P>
           You may request access to, correction of, or deletion of personal information we hold about you by emailing{" "}
-          <a href="mailto:hello@koemori.ai" className="text-rain-700 underline hover:text-rain-600">hello@koemori.ai</a>.
+          <a href="mailto:help@koemori.ai" className="text-rain-700 underline hover:text-rain-600">help@koemori.ai</a>.
           Depending on where you live, you may have additional rights under laws such as the CCPA/CPRA or similar.
         </P>
 
@@ -104,7 +104,7 @@ export default function Privacy() {
           <strong>We do not sell your personal information, and we do not share it for cross-context behavioral
           advertising.</strong> If our practices ever change, we will update this section and provide a method to opt out.
           To make a privacy request, email{" "}
-          <a href="mailto:hello@koemori.ai" className="text-rain-700 underline hover:text-rain-600">hello@koemori.ai</a>.
+          <a href="mailto:help@koemori.ai" className="text-rain-700 underline hover:text-rain-600">help@koemori.ai</a>.
         </P>
 
         <H>10. Children's Privacy</H>
@@ -115,7 +115,7 @@ export default function Privacy() {
 
         <H>12. Contact</H>
         <P>
-          Questions or privacy requests: <a href="mailto:hello@koemori.ai" className="text-rain-700 underline hover:text-rain-600">hello@koemori.ai</a>.
+          Questions or privacy requests: <a href="mailto:help@koemori.ai" className="text-rain-700 underline hover:text-rain-600">help@koemori.ai</a>.
           Koemori is a DBA of Driveway Detailers LLC, Nashville, Tennessee.
         </P>
       </motion.div>

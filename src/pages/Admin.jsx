@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Phone, Mail, Users, LogOut, RefreshCw, TrendingUp,
-  LayoutGrid, ListChecks, ArrowLeft,
+  LayoutGrid, ListChecks, ArrowLeft, ShieldAlert,
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import ClientsManager from "../components/ClientsManager";
@@ -93,13 +93,39 @@ const fmt = (d) =>
 const TABS = [
   { id: "overview", label: "Overview", icon: LayoutGrid },
   { id: "clients", label: "Clients", icon: ListChecks },
+  { id: "access", label: "Access Log", icon: ShieldAlert },
 ];
+
+const ADMIN_EMAIL = "rainn.causer1@gmail.com";
+
+function fmtAgo(iso) {
+  if (!iso) return "—";
+  const diff = Math.round((Date.now() - new Date(iso)) / 60000);
+  if (diff < 1) return "Just now";
+  if (diff < 60) return `${diff}m ago`;
+  if (diff < 1440) return `${Math.round(diff / 60)}h ago`;
+  if (diff < 10080) return `${Math.round(diff / 1440)}d ago`;
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
 
 export default function Admin() {
   const navigate = useNavigate();
   const [tab, setTab] = useState("overview");
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState({ trials: [], contacts: [], waitlist: [] });
+  const [accessLog, setAccessLog] = useState([]);
+  const [accessLoading, setAccessLoading] = useState(false);
+
+  // Hard guard: verify the signed-in email is the admin before loading any data
+  useEffect(() => {
+    if (!supabase) return;
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session || session.user?.email !== ADMIN_EMAIL) {
+        if (session) await supabase.auth.signOut();
+        navigate("/login", { replace: true });
+      }
+    });
+  }, [navigate]);
 
   const fetchData = async () => {
     if (!supabase) { setLoading(false); return; }
@@ -118,6 +144,28 @@ export default function Admin() {
   };
 
   useEffect(() => { fetchData(); }, []);
+
+  const fetchAccessLog = async () => {
+    setAccessLoading(true);
+    try {
+      const sessionRes = await supabase?.auth.getSession();
+      const token = sessionRes?.data?.session?.access_token;
+      if (!token) return;
+      const res = await fetch("/.netlify/functions/admin-auth-users", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json().catch(() => ({}));
+      setAccessLog(data.unknown || []);
+    } catch (e) {
+      console.error("Access log error:", e.message);
+    } finally {
+      setAccessLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (tab === "access") fetchAccessLog();
+  }, [tab]);
 
   const signOut = async () => {
     await supabase?.auth.signOut();
@@ -271,7 +319,7 @@ export default function Admin() {
               />
             </motion.div>
           </>
-        ) : (
+        ) : tab === "clients" ? (
           <>
             <div className="mb-8">
               <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-rain-600 mb-1">
@@ -281,10 +329,68 @@ export default function Admin() {
                 Your pipeline
               </h1>
               <p className="text-slate-600 text-sm mt-1.5">
-                Track every client from first call to going live. Drag pipeline stage by editing inside.
+                Click any client to see their calls and usage. Hit "Edit client" to update their settings.
               </p>
             </div>
             <ClientsManager />
+          </>
+        ) : (
+          <>
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-rain-600 mb-1">
+                  Access Log
+                </div>
+                <h1 className="font-display text-3xl text-slate-900 tracking-tight">
+                  Unknown sign-ins
+                </h1>
+                <p className="text-slate-600 text-sm mt-1.5">
+                  People who received a magic link but don't have a client account yet.
+                </p>
+              </div>
+              <button
+                onClick={fetchAccessLog}
+                className="w-10 h-10 rounded-full bg-cream-50 border border-slate-900/10 hover:border-slate-900/25 flex items-center justify-center transition"
+              >
+                <RefreshCw className={`w-4 h-4 text-slate-600 ${accessLoading ? "animate-spin" : ""}`} />
+              </button>
+            </div>
+
+            {accessLoading ? (
+              <div className="text-center py-16 text-slate-400">Loading…</div>
+            ) : accessLog.length === 0 ? (
+              <div className="bg-cream-50 border border-slate-900/8 rounded-2xl p-12 text-center">
+                <div className="w-12 h-12 rounded-full bg-emerald-100 mx-auto flex items-center justify-center mb-4">
+                  <ShieldAlert className="w-5 h-5 text-emerald-700" />
+                </div>
+                <div className="font-display text-xl text-slate-900 mb-2">All clear</div>
+                <p className="text-slate-500 text-sm">No unknown sign-in attempts. Everyone who has accessed the portal is a provisioned client.</p>
+              </div>
+            ) : (
+              <div className="bg-cream-50 border border-slate-900/8 rounded-2xl overflow-hidden">
+                <div className="px-6 py-4 border-b border-slate-900/6 flex items-center justify-between">
+                  <div className="font-display text-lg text-slate-900 tracking-tight">Unknown accounts</div>
+                  <div className="font-mono text-[10px] text-slate-500 uppercase tracking-wider">{accessLog.length} found</div>
+                </div>
+                <div className="divide-y divide-slate-900/4">
+                  {accessLog.map((u) => (
+                    <div key={u.email} className="px-6 py-4 flex items-center justify-between gap-4">
+                      <div>
+                        <div className="font-medium text-slate-900 text-sm">{u.email}</div>
+                        <div className="text-[11px] text-slate-500 mt-0.5">
+                          Last sign-in: {fmtAgo(u.last_sign_in)} · Created: {fmtAgo(u.created_at)}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] uppercase tracking-wider font-medium bg-amber-100 text-amber-700">
+                          No account
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>

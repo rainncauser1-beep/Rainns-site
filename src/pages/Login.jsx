@@ -22,9 +22,15 @@ export default function Login() {
     }
     setLoading(true);
     setError("");
-    const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
     if (authError) {
       setError(authError.message);
+      setLoading(false);
+      return;
+    }
+    if (data?.user?.email !== "rainn.causer1@gmail.com") {
+      await supabase.auth.signOut();
+      setError("Access denied.");
       setLoading(false);
       return;
     }

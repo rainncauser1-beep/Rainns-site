@@ -56,6 +56,9 @@ export function emptyClient() {
     payment_status: "unpaid",
     stripe_customer_id: "",
     stripe_subscription_id: "",
+    monthly_call_limit: 0,
+    calls_this_month: 0,
+    calls_reset_at: null,
     ...Object.fromEntries(CHECKLIST_STEPS.map((s) => [s.key, false])),
   };
 }
@@ -86,6 +89,10 @@ export async function saveClient(client) {
       client.setup_fee === "" || client.setup_fee == null
         ? null
         : Number(client.setup_fee),
+    monthly_call_limit:
+      client.monthly_call_limit === "" || client.monthly_call_limit == null
+        ? 0
+        : Number(client.monthly_call_limit),
   };
   // Strip id if not present, and timestamps (managed by db)
   delete payload.created_at;

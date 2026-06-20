@@ -68,7 +68,15 @@ exports.handler = async (event) => {
     return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
   }
 
-  // Notify Rainn (best-effort)
+  // Send portal access magic link + notify Rainn (both best-effort)
+  const siteUrl = process.env.URL || "https://koemori.ai";
+  if (record.owner_email) {
+    try {
+      await sendPortalInvite(record, siteUrl);
+    } catch (e) {
+      console.error("Portal invite error:", e.message);
+    }
+  }
   try {
     await notifyOwner(record);
   } catch (e) {
@@ -81,6 +89,40 @@ exports.handler = async (event) => {
     body: JSON.stringify({ ok: true, client_id: data?.id }),
   };
 };
+
+async function sendPortalInvite(record, siteUrl) {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) return;
+
+  const firstName = (record.owner_name || "").split(" ")[0] || "there";
+  // Direct them to portal login with email pre-filled — they click one button
+  // and get their magic link on demand. Avoids Supabase auth rate limits entirely.
+  const loginUrl = `${siteUrl}/portal/login?email=${encodeURIComponent(record.owner_email)}`;
+
+  const html = `
+    <div style="font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; max-width:540px; margin:0 auto; color:#0b1220; line-height:1.6;">
+      <p style="font-size:12px; color:#6b7280; text-transform:uppercase; letter-spacing:0.12em; margin:0 0 4px;">Koemori · Your portal is ready</p>
+      <h2 style="margin:0 0 12px; font-size:22px;">Hey ${esc(firstName)} 👋</h2>
+      <p style="margin:0 0 16px;">Thanks for signing up. We've saved everything about <strong>${esc(record.business_name)}</strong> and your Koemori client portal is ready — sign in to see your dashboard and track your AI's performance once it's live.</p>
+      <div style="margin:24px 0;">
+        <a href="${loginUrl}" style="display:inline-block; background:#0b1220; color:#fff; padding:14px 28px; border-radius:9999px; font-weight:600; font-size:15px; text-decoration:none;">Access your portal →</a>
+      </div>
+      <p style="font-size:13px; color:#6b7280;">Click the button, hit "Email me a sign-in link," and you're in — no password needed. Takes 5 seconds.</p>
+      <p style="margin-top:32px; padding-top:20px; border-top:1px solid #e5e7eb; font-size:12px; color:#9ca3af;">Sent by Koemori · <a href="mailto:help@koemori.ai" style="color:#9ca3af;">help@koemori.ai</a></p>
+    </div>
+  `;
+
+  await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      from: process.env.MAIL_FROM || DEFAULT_FROM,
+      to: [record.owner_email],
+      subject: `Your Koemori portal is ready, ${firstName}`,
+      html,
+    }),
+  });
+}
 
 async function notifyOwner(record) {
   const key = process.env.RESEND_API_KEY;

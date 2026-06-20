@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import RaindropMark from "../components/RaindropMark";
+import PortalAnalytics from "../components/PortalAnalytics";
 
 const EASE = [0.22, 1, 0.36, 1];
 
@@ -16,10 +17,11 @@ const EASE = [0.22, 1, 0.36, 1];
 // Unconditional forward = all calls go to AI. Simple, always works.
 // Toggle on/off with the off code. Roofers use this when on job sites.
 const CARRIERS = [
-  { name: "AT&T",     on: "**21*{n}#", off: "##21#", settings: false },
-  { name: "T-Mobile", on: "**21*{n}#", off: "##21#", settings: false },
-  { name: "Verizon",  on: "*72{n}",    off: "*73",   settings: true  },
-  { name: "Other",    on: "**21*{n}#", off: "##21#", settings: false },
+  { name: "AT&T",     on: "**21*{n}#", off: "##21#", settings: false, zoom: false },
+  { name: "T-Mobile", on: "**21*{n}#", off: "##21#", settings: false, zoom: false },
+  { name: "Verizon",  on: "*72{n}",    off: "*73",   settings: true,  zoom: false },
+  { name: "Zoom",     on: "",          off: "",       settings: false, zoom: true  },
+  { name: "Other",    on: "**21*{n}#", off: "##21#", settings: false, zoom: false },
 ];
 
 function fmtCode(template, number) {
@@ -161,24 +163,33 @@ export default function Portal() {
       return;
     }
     let cancelled = false;
-    (async () => {
-      const { data } = await supabase.auth.getSession();
-      const user = data.session?.user;
-      if (!user) {
-        if (!cancelled) navigate("/portal/login", { replace: true });
-        return;
-      }
+    let dataLoaded = false;
+
+    async function loadData(user) {
+      // Guard against double-fetch (INITIAL_SESSION + SIGNED_IN both firing)
+      if (dataLoaded || cancelled) return;
+      dataLoaded = true;
       setAuthChecked(true);
 
-      // Find this user's client row by their email
-      const { data: clientRow } = await supabase
+      const { data: clientRow, error: clientErr } = await supabase
         .from("clients")
         .select("*")
         .eq("owner_email", user.email)
         .maybeSingle();
 
       if (cancelled) return;
-      setClient(clientRow);
+
+      if (clientErr) {
+        console.error("Portal: client lookup failed:", clientErr.message);
+      }
+
+      // Admin visiting the portal goes straight to /admin
+      if (!clientRow && user.email === "rainn.causer1@gmail.com") {
+        navigate("/admin", { replace: true });
+        return;
+      }
+
+      setClient(clientRow || null);
 
       if (clientRow) {
         const { data: callRows } = await supabase
@@ -190,8 +201,37 @@ export default function Portal() {
         if (!cancelled) setCalls(callRows || []);
       }
       if (!cancelled) setLoading(false);
-    })();
-    return () => { cancelled = true; };
+    }
+
+    // onAuthStateChange is used instead of getSession() to handle the magic-link
+    // callback correctly. When a user clicks the sign-in link, Supabase processes
+    // the URL token and fires SIGNED_IN — getSession() called too early would
+    // return null and incorrectly bounce them back to the login page.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (cancelled) return;
+      const user = session?.user;
+
+      if (event === "SIGNED_OUT") {
+        navigate("/portal/login", { replace: true });
+        return;
+      }
+
+      if (!user) {
+        if (event === "INITIAL_SESSION") {
+          setAuthChecked(true);
+          setLoading(false);
+          navigate("/portal/login", { replace: true });
+        }
+        return;
+      }
+
+      loadData(user);
+    });
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, [navigate]);
 
   // Realtime subscription: new calls appear without refresh
@@ -322,7 +362,7 @@ export default function Portal() {
           </p>
           <div className="flex flex-col gap-2">
             <a
-              href="mailto:hello@koemori.ai"
+              href="mailto:help@koemori.ai"
               className="bg-slate-900 text-cream-100 px-5 py-3 rounded-full font-medium hover:bg-rain-700 transition"
             >
               Email us
@@ -482,7 +522,50 @@ export default function Portal() {
                     </div>
                   </div>
 
-                  {/* Turn ON code */}
+                  {/* Zoom Phone steps */}
+                  {selectedCarrier.zoom ? (
+                    <div className="space-y-3 mb-3">
+                      <div className="bg-slate-900 rounded-2xl p-5">
+                        <p className="text-cream-100/60 text-[11px] uppercase tracking-wider font-mono mb-3">Turn AI ON — forward all calls</p>
+                        <ol className="space-y-3">
+                          {[
+                            "Open the Zoom app on your phone or computer",
+                            "Tap your profile picture (top left) → Settings",
+                            "Tap Phone → Call Handling",
+                            <>Under <strong className="text-cream-100">"Always forward to"</strong>, toggle it ON</>,
+                            <>Enter your AI number: <span className="font-mono text-rain-300">{aiNumber || "<your AI number>"}</span></>,
+                            "Tap Save — every call now goes to your AI",
+                          ].map((step, i) => (
+                            <li key={i} className="flex gap-3 text-cream-100/90 text-[13px] leading-relaxed">
+                              <span className="flex-shrink-0 w-5 h-5 rounded-full bg-rain-700 text-cream-100 text-[10px] font-bold flex items-center justify-center mt-0.5">{i + 1}</span>
+                              <span>{step}</span>
+                            </li>
+                          ))}
+                        </ol>
+                      </div>
+                      <div className="bg-slate-900 rounded-2xl p-5">
+                        <p className="text-cream-100/60 text-[11px] uppercase tracking-wider font-mono mb-3">Turn AI OFF — take calls yourself again</p>
+                        <ol className="space-y-3">
+                          {[
+                            "Open Zoom → profile picture → Settings",
+                            "Phone → Call Handling",
+                            <>Toggle <strong className="text-cream-100">"Always forward to"</strong> OFF</>,
+                            "Save — calls ring your phone normally again",
+                          ].map((step, i) => (
+                            <li key={i} className="flex gap-3 text-cream-100/90 text-[13px] leading-relaxed">
+                              <span className="flex-shrink-0 w-5 h-5 rounded-full bg-slate-600 text-cream-100 text-[10px] font-bold flex items-center justify-center mt-0.5">{i + 1}</span>
+                              <span>{step}</span>
+                            </li>
+                          ))}
+                        </ol>
+                      </div>
+                      <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-[13px] text-amber-900 leading-relaxed">
+                        <strong>Zoom admin?</strong> If your number is managed by a company Zoom account, go to <strong>zoom.us → Admin → Phone System → Users</strong>, find your number, and set forwarding there instead.
+                      </div>
+                    </div>
+                  ) : (
+                  <>
+                  {/* Standard carrier dialer codes */}
                   <div className="bg-slate-900 rounded-2xl p-5 mb-3">
                     <p className="text-cream-100/60 text-[11px] uppercase tracking-wider font-mono mb-1">Turn AI ON — open dialer and type:</p>
                     <p className="font-mono text-cream-100 text-xl md:text-2xl break-all tracking-wide mb-3">
@@ -499,6 +582,8 @@ export default function Portal() {
                     <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-[13px] text-amber-900 leading-relaxed mb-3">
                       <strong>Verizon tip:</strong> If the dialer code doesn't work, go to <strong>Settings → Phone → Call Forwarding</strong> on your iPhone, toggle it on, and enter <span className="font-mono">{aiNumber}</span>. To turn off, toggle it back.
                     </div>
+                  )}
+                  </>
                   )}
 
                   <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 text-[13px] text-emerald-900 leading-relaxed">
@@ -520,21 +605,38 @@ export default function Portal() {
 
               {/* Quick reference */}
               <div className="bg-cream-100 border border-slate-900/8 rounded-2xl p-5">
-                <p className="font-mono text-[10px] uppercase tracking-wider text-slate-500 mb-3">Quick reference — {carrier} codes</p>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <p className="text-slate-500 text-[12px] mb-1">AI ON (forward calls)</p>
-                    <code className="font-mono bg-slate-900 text-cream-100 px-2.5 py-1.5 rounded-lg text-[12px] block break-all">
-                      {fmtCode(selectedCarrier.on, aiNumber)}
-                    </code>
+                <p className="font-mono text-[10px] uppercase tracking-wider text-slate-500 mb-3">Quick reference — {carrier}</p>
+                {selectedCarrier.zoom ? (
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <p className="text-slate-500 text-[12px] mb-1">AI ON</p>
+                      <code className="font-mono bg-slate-900 text-cream-100 px-2.5 py-1.5 rounded-lg text-[12px] block">
+                        Zoom → Settings → Phone → Call Handling → Always forward ON
+                      </code>
+                    </div>
+                    <div>
+                      <p className="text-slate-500 text-[12px] mb-1">AI OFF</p>
+                      <code className="font-mono bg-slate-900 text-cream-100 px-2.5 py-1.5 rounded-lg text-[12px] block">
+                        Same path → Always forward OFF
+                      </code>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-slate-500 text-[12px] mb-1">AI OFF (back to normal)</p>
-                    <code className="font-mono bg-slate-900 text-cream-100 px-2.5 py-1.5 rounded-lg text-[12px] block">
-                      {selectedCarrier.off}
-                    </code>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <p className="text-slate-500 text-[12px] mb-1">AI ON (forward calls)</p>
+                      <code className="font-mono bg-slate-900 text-cream-100 px-2.5 py-1.5 rounded-lg text-[12px] block break-all">
+                        {fmtCode(selectedCarrier.on, aiNumber)}
+                      </code>
+                    </div>
+                    <div>
+                      <p className="text-slate-500 text-[12px] mb-1">AI OFF (back to normal)</p>
+                      <code className="font-mono bg-slate-900 text-cream-100 px-2.5 py-1.5 rounded-lg text-[12px] block">
+                        {selectedCarrier.off}
+                      </code>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
           )}
@@ -694,8 +796,24 @@ export default function Portal() {
           )}
         </motion.div>
 
+        {/* Analytics */}
+        <PortalAnalytics calls={calls} />
+
+        {/* Monthly call usage */}
+        {client.monthly_call_limit > 0 && (
+          <CallUsageCard client={client} />
+        )}
+
         {/* Edit business info */}
         <EditBusinessInfo client={client} onUpdated={(updated) => setClient((c) => ({ ...c, ...updated }))} />
+
+        {/* Annual upgrade */}
+        {client.payment_status === "active" && client.monthly_recurring > 0 && (
+          <AnnualUpgradeCard client={client} />
+        )}
+
+        {/* Billing management */}
+        <BillingPortalCard client={client} />
 
         {/* Manage subscription */}
         <ManageSubscription client={client} onChanged={(status) => setClient((c) => ({ ...c, payment_status: status }))} />
@@ -703,10 +821,68 @@ export default function Portal() {
         <div className="mt-12 mb-6 text-center text-[12px] text-slate-500">
           <Link to="/" className="hover:text-slate-900 transition">Back to koemori.ai</Link>
           {" · "}
-          <a href="mailto:hello@koemori.ai" className="hover:text-slate-900 transition">Get help</a>
+          <a href="mailto:help@koemori.ai" className="hover:text-slate-900 transition">Get help</a>
         </div>
       </main>
     </div>
+  );
+}
+
+function CallUsageCard({ client }) {
+  const used = client.calls_this_month ?? 0;
+  const limit = client.monthly_call_limit ?? 0;
+  const pct = limit > 0 ? Math.min((used / limit) * 100, 100) : 0;
+  const remaining = Math.max(limit - used, 0);
+  const atLimit = used >= limit;
+  const resetAt = client.calls_reset_at
+    ? new Date(client.calls_reset_at).toLocaleDateString("en-US", { month: "long", day: "numeric" })
+    : "next month";
+
+  return (
+    <motion.section
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      className="bg-white border border-slate-900/8 rounded-2xl p-6 mb-6"
+    >
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-slate-500 mb-1">
+            Monthly call usage
+          </div>
+          <div className="font-display text-2xl text-slate-900">
+            {used} <span className="text-slate-400 text-lg font-sans font-normal">/ {limit} calls</span>
+          </div>
+        </div>
+        <div className={`text-right text-sm font-medium ${atLimit ? "text-rose-600" : "text-emerald-600"}`}>
+          {atLimit ? "Limit reached" : `${remaining} remaining`}
+        </div>
+      </div>
+
+      {/* Progress bar */}
+      <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden mb-3">
+        <div
+          className={`h-full rounded-full transition-all duration-700 ${
+            pct >= 90 ? "bg-rose-500" : pct >= 70 ? "bg-amber-500" : "bg-emerald-500"
+          }`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+
+      <div className="flex items-center justify-between text-[12px] text-slate-500">
+        <span>Resets {resetAt}</span>
+        {atLimit && (
+          <span className="text-rose-600 font-medium">
+            AI is paused until reset · <a href="mailto:help@koemori.ai" className="underline">Contact us to upgrade</a>
+          </span>
+        )}
+        {!atLimit && pct >= 80 && (
+          <span className="text-amber-600 font-medium">
+            Running low · <a href="mailto:help@koemori.ai" className="underline">Upgrade plan</a>
+          </span>
+        )}
+      </div>
+    </motion.section>
   );
 }
 
@@ -721,6 +897,13 @@ function EditBusinessInfo({ client, onUpdated }) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
+
+  // JobNimbus connection state (handled separately from the main form)
+  const [jnKey, setJnKey] = useState("");
+  const [jnSaving, setJnSaving] = useState(false);
+  const [jnSaved, setJnSaved] = useState(false);
+  const [jnError, setJnError] = useState("");
+  const isJnConnected = Boolean(client.jobnimbus_api_key);
 
   const dirty =
     form.business_hours !== (client.business_hours || "") ||
@@ -755,6 +938,34 @@ function EditBusinessInfo({ client, onUpdated }) {
       setError(e.message || "Could not save changes.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const saveJobNimbus = async (keyToSave) => {
+    setJnSaving(true);
+    setJnError("");
+    setJnSaved(false);
+    try {
+      const sessionRes = await supabase?.auth.getSession();
+      const token = sessionRes?.data?.session?.access_token;
+      if (!token) throw new Error("Not signed in");
+
+      const res = await fetch("/.netlify/functions/update-client-prefs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ jobnimbus_api_key: keyToSave }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `Failed (HTTP ${res.status})`);
+
+      onUpdated?.({ jobnimbus_api_key: keyToSave || null });
+      setJnKey("");
+      setJnSaved(true);
+      setTimeout(() => setJnSaved(false), 3000);
+    } catch (e) {
+      setJnError(e.message || "Could not save.");
+    } finally {
+      setJnSaving(false);
     }
   };
 
@@ -830,6 +1041,52 @@ function EditBusinessInfo({ client, onUpdated }) {
                 />
               </Field>
 
+              {/* JobNimbus integration */}
+              <div className="border-t border-slate-900/8 pt-5">
+                <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-slate-500 mb-1">JobNimbus CRM <span className="normal-case tracking-normal text-slate-400">(optional)</span></div>
+                <p className="text-[11px] text-slate-400 mb-3 leading-relaxed">
+                  Connect your JobNimbus account and the AI will automatically add leads and schedule estimate appointments there instead of Cal.com.
+                </p>
+                {isJnConnected ? (
+                  <div className="flex items-center justify-between gap-3 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3">
+                    <div className="flex items-center gap-2 text-emerald-800 text-sm font-medium">
+                      <Check className="w-4 h-4" /> JobNimbus connected
+                    </div>
+                    <button
+                      onClick={() => saveJobNimbus("")}
+                      disabled={jnSaving}
+                      className="text-[12px] text-rose-600 hover:text-rose-800 font-medium transition"
+                    >
+                      {jnSaving ? "Disconnecting…" : "Disconnect"}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <input
+                      type="password"
+                      className={`${inputCls} flex-1`}
+                      value={jnKey}
+                      onChange={(e) => setJnKey(e.target.value)}
+                      placeholder="Paste your JobNimbus API key"
+                      autoComplete="off"
+                    />
+                    <button
+                      onClick={() => saveJobNimbus(jnKey.trim())}
+                      disabled={jnSaving || !jnKey.trim()}
+                      className="flex-shrink-0 inline-flex items-center gap-1.5 bg-slate-900 text-cream-100 px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-rain-700 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      {jnSaving ? <Loader2 className="w-4 h-4 animate-spin" /> :
+                       jnSaved ? <Check className="w-4 h-4" /> : null}
+                      {jnSaving ? "Connecting…" : jnSaved ? "Connected!" : "Connect"}
+                    </button>
+                  </div>
+                )}
+                <p className="text-[11px] text-slate-400 mt-2 leading-relaxed">
+                  Find your API key in JobNimbus under <strong>Settings → Integrations → API → New API Key</strong>.
+                </p>
+                {jnError && <p className="mt-2 text-[12px] text-rose-600">{jnError}</p>}
+              </div>
+
               {error && (
                 <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 flex-shrink-0" />
@@ -839,8 +1096,9 @@ function EditBusinessInfo({ client, onUpdated }) {
 
               <div className="flex items-center justify-between pt-2">
                 <p className="text-[11px] text-slate-500 leading-relaxed max-w-md">
-                  Heads up: AI changes take effect on your <strong>next</strong> call,
-                  not calls already in progress.
+                  {saved
+                    ? "Your AI has been updated and will use these settings on the next call."
+                    : "Changes are pushed to your AI instantly — active calls won't be affected."}
                 </p>
                 <button
                   onClick={save}
@@ -850,7 +1108,7 @@ function EditBusinessInfo({ client, onUpdated }) {
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> :
                    saved ? <Check className="w-4 h-4" /> :
                    <Save className="w-4 h-4" />}
-                  {saving ? "Saving…" : saved ? "Saved" : "Save changes"}
+                  {saving ? "Updating AI…" : saved ? "AI Updated" : "Save changes"}
                 </button>
               </div>
             </div>
@@ -870,6 +1128,132 @@ function Field({ label, hint, children }) {
       {children}
       {hint && <div className="text-[11px] text-slate-400 mt-1.5 leading-relaxed">{hint}</div>}
     </label>
+  );
+}
+
+function BillingPortalCard({ client }) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleManageBilling = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const sessionRes = await supabase?.auth.getSession();
+      const token = sessionRes?.data?.session?.access_token;
+      if (!token) throw new Error("Not signed in");
+
+      const res = await fetch("/.netlify/functions/customer-portal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Could not open billing portal");
+      window.location.href = data.url;
+    } catch (e) {
+      setError(e.message || "Something went wrong.");
+      setLoading(false);
+    }
+  };
+
+  if (!client.stripe_customer_id) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, ease: EASE, delay: 0.1 }}
+      className="bg-white border border-slate-900/8 rounded-2xl p-6 mb-6"
+    >
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-slate-500 mb-1">Billing</div>
+          <div className="font-display text-lg text-slate-900 mb-1">Payment &amp; Plan</div>
+          <p className="text-[13px] text-slate-500 leading-relaxed">Update your card, download invoices, or change your plan — all in one place.</p>
+          {error && <p className="mt-2 text-[12px] text-rose-600">{error}</p>}
+        </div>
+        <button
+          onClick={handleManageBilling}
+          disabled={loading}
+          className="flex-shrink-0 inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition disabled:opacity-60 whitespace-nowrap"
+        >
+          {loading ? "Opening…" : "Manage Billing →"}
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
+function AnnualUpgradeCard({ client }) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const monthly = Number(client.monthly_recurring || 0);
+  const yearlySavings = Math.round(monthly * 12 * 0.2);
+  const yearlyTotal = Math.round(monthly * 12 * 0.8);
+  const monthlyEquiv = (yearlyTotal / 12).toFixed(0);
+
+  const handleUpgrade = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const sessionRes = await supabase?.auth.getSession();
+      const token = sessionRes?.data?.session?.access_token;
+      if (!token) throw new Error("Not signed in");
+
+      const res = await fetch("/.netlify/functions/create-checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          client_id: client.id,
+          client_email: client.owner_email || undefined,
+          client_name: client.business_name || undefined,
+          setup_amount: 0,
+          monthly_amount: monthly,
+          billing_interval: "year",
+          trial_days: 0,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Could not generate link");
+      window.location.href = data.url;
+    } catch (e) {
+      setError(e.message || "Something went wrong.");
+      setLoading(false);
+    }
+  };
+
+  if (monthly <= 0) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, ease: EASE, delay: 0.15 }}
+      className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl p-6 mb-6"
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex-1">
+          <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-emerald-600 mb-1">
+            Annual plan · Save 20%
+          </div>
+          <div className="font-display text-xl text-slate-900 mb-1">
+            ${monthlyEquiv}<span className="text-slate-500 text-base font-sans font-normal">/mo</span>
+            <span className="ml-2 text-sm font-sans font-normal text-slate-400 line-through">${monthly}/mo</span>
+          </div>
+          <p className="text-[13px] text-slate-600">
+            Billed as <strong className="text-slate-800">${yearlyTotal}/year</strong> — you save <strong className="text-emerald-700">${yearlySavings}</strong> compared to month-to-month.
+          </p>
+          {error && <p className="mt-2 text-[12px] text-rose-600">{error}</p>}
+        </div>
+        <button
+          onClick={handleUpgrade}
+          disabled={loading}
+          className="flex-shrink-0 inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition disabled:opacity-60"
+        >
+          {loading ? "Loading…" : "Switch to Annual →"}
+        </button>
+      </div>
+    </motion.div>
   );
 }
 

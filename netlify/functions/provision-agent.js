@@ -66,6 +66,11 @@ function buildPrompt(c, websiteContext, bookingEnabled) {
   if (c.business_hours) {
     lines.push("# BUSINESS HOURS");
     lines.push(c.business_hours);
+    lines.push("IMPORTANT: Only offer, suggest, or confirm appointment times that fall within these business hours. If a caller asks about a time outside these hours, politely explain that the team isn't available then and redirect to the next available time within hours. Never promise or imply the team is available outside these hours.");
+    lines.push("");
+  } else {
+    lines.push("# BUSINESS HOURS");
+    lines.push("Business hours were not provided. Do not promise or confirm specific appointment times — just capture the caller's preferred day/time and let them know the team will follow up to confirm.");
     lines.push("");
   }
   if (c.services) {
@@ -87,15 +92,27 @@ function buildPrompt(c, websiteContext, bookingEnabled) {
   lines.push("- How urgent it is (an active leak is urgent)");
   lines.push("");
   if (bookingEnabled) {
-    lines.push("# BOOKING — YOU CAN BOOK REAL APPOINTMENTS");
-    lines.push("You have a tool called `manage_booking` connected to the live calendar. Use it to book a real estimate:");
-    lines.push("1. When the caller is ready to schedule, ask what day works. Call `manage_booking` with action=\"check_availability\" and that date.");
-    lines.push("2. The tool returns real open times. Offer the caller 2-3 of them in plain language.");
-    lines.push("3. When they pick one, call `manage_booking` with action=\"book\", the exact start_time it gave you (ISO 8601), the caller_name, caller_phone, and caller_email if you have it.");
-    lines.push("4. Only confirm the appointment AFTER the tool says it booked. Read back the day and time.");
-    lines.push("Never invent a time or say 'booked' before the tool confirms it. If the tool says a slot was taken, offer another.");
-    lines.push("Always still capture name + callback number even if they don't book.");
-    lines.push("");
+    const jnMode = Boolean(c.jobnimbus_api_key);
+    if (jnMode) {
+      lines.push("# BOOKING — JOBNIMBUS CONNECTED");
+      lines.push("You have a tool called `manage_booking` connected to the client's JobNimbus CRM. Use it to add the caller as a lead and schedule their estimate:");
+      lines.push("1. When the caller is ready to book, ask what day and time works best for them.");
+      lines.push("2. Call `manage_booking` with action=\"book\", start_time as an ISO 8601 datetime (e.g. \"2026-06-20T10:00:00\"), caller_name, caller_phone, and caller_email if you have it.");
+      lines.push("3. The tool adds them to JobNimbus and confirms. Read back the day and time to the caller.");
+      lines.push("No need to check availability first — just get their preferred time and book it directly.");
+      lines.push("Always still capture name + callback number even if they don't book.");
+      lines.push("");
+    } else {
+      lines.push("# BOOKING — YOU CAN BOOK REAL APPOINTMENTS");
+      lines.push("You have a tool called `manage_booking` connected to the live calendar. Use it to book a real estimate:");
+      lines.push("1. When the caller is ready to schedule, ask what day works. Call `manage_booking` with action=\"check_availability\" and that date.");
+      lines.push("2. The tool returns real open times. Offer the caller 2-3 of them in plain language.");
+      lines.push("3. When they pick one, call `manage_booking` with action=\"book\", the exact start_time it gave you (ISO 8601), the caller_name, caller_phone, and caller_email if you have it.");
+      lines.push("4. Only confirm the appointment AFTER the tool says it booked. Read back the day and time.");
+      lines.push("Never invent a time or say 'booked' before the tool confirms it. If the tool says a slot was taken, offer another.");
+      lines.push("Always still capture name + callback number even if they don't book.");
+      lines.push("");
+    }
   } else {
     lines.push("# BOOKING — READ CAREFULLY");
     lines.push("You do NOT have live access to the calendar, so you must NEVER promise, confirm, or 'lock in' a specific appointment time, and never tell two callers the same slot is reserved.");
@@ -336,13 +353,39 @@ exports.handler = async (event) => {
       // (address/service/urgency extraction). Best-effort — don't fail the
       // whole update if this errors.
       try {
+        const siteUrlForUpdate = process.env.URL || "https://koemori.ai";
         await fetch(`https://api.retellai.com/update-agent/${body.retell_agent_id}`, {
           method: "PATCH",
           headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ post_call_analysis_data: POST_CALL_FIELDS }),
+          body: JSON.stringify({
+            post_call_analysis_data: POST_CALL_FIELDS,
+            dynamic_variables_webhook_url: `${siteUrlForUpdate}/.netlify/functions/call-gate`,
+          }),
         });
       } catch (e) {
         console.error("update-agent post_call_analysis_data failed:", e.message);
+      }
+
+      // Update Cal.com daily cap if a calendar already exists and a new cap was sent
+      if (effectiveEventTypeId && body.booking_daily_cap) {
+        const calKey = process.env.CALCOM_API_KEY;
+        if (calKey) {
+          try {
+            await fetch(`https://api.cal.com/v2/event-types/${effectiveEventTypeId}`, {
+              method: "PATCH",
+              headers: {
+                Authorization: `Bearer ${calKey}`,
+                "cal-api-version": CAL_EVENT_TYPES_VERSION,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                bookingLimitsCount: { day: Number(body.booking_daily_cap) },
+              }),
+            });
+          } catch (e) {
+            console.error("Cal.com daily cap update failed:", e.message);
+          }
+        }
       }
 
       // If no phone number exists yet, buy one now (this client was provisioned
@@ -433,6 +476,7 @@ exports.handler = async (event) => {
 
   const siteUrl = process.env.URL || "https://koemori.ai";
   const webhookUrl = `${siteUrl}/.netlify/functions/lead-handoff`;
+  const callGateUrl = `${siteUrl}/.netlify/functions/call-gate`;
 
   let agent;
   try {
@@ -447,6 +491,7 @@ exports.handler = async (event) => {
         responsiveness: 1,
         interruption_sensitivity: 1,
         webhook_url: webhookUrl,
+        dynamic_variables_webhook_url: callGateUrl,
         post_call_analysis_data: POST_CALL_FIELDS,
       }),
     });

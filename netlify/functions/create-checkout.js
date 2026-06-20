@@ -27,7 +27,18 @@ exports.handler = async (event) => {
     return { statusCode: 405, body: JSON.stringify({ error: "Method not allowed" }) };
   }
 
-  // Auth: verify caller is admin
+  // Parse body first so we can check billing_interval during auth
+  let body;
+  try {
+    body = JSON.parse(event.body || "{}");
+  } catch {
+    return { statusCode: 400, body: JSON.stringify({ error: "Invalid JSON body" }) };
+  }
+
+  const { client_id, client_email, client_name, setup_amount, monthly_amount, trial_days, billing_interval } = body;
+  const isYearly = billing_interval === "year";
+
+  // Auth: admin can generate any checkout; authenticated clients can only request their own yearly upgrade
   const auth = event.headers.authorization || event.headers.Authorization || "";
   if (!auth.startsWith("Bearer ")) {
     return { statusCode: 401, body: JSON.stringify({ error: "Missing bearer token" }) };
@@ -38,22 +49,14 @@ exports.handler = async (event) => {
   if (!jwtPayload) {
     return { statusCode: 401, body: JSON.stringify({ error: "Invalid token" }) };
   }
-  if (jwtPayload.email !== ADMIN_EMAIL) {
-    return { statusCode: 403, body: JSON.stringify({ error: "Forbidden" }) };
-  }
   if (jwtPayload.exp && jwtPayload.exp * 1000 < Date.now()) {
     return { statusCode: 401, body: JSON.stringify({ error: "Token expired" }) };
   }
-
-  // Parse body
-  let body;
-  try {
-    body = JSON.parse(event.body || "{}");
-  } catch {
-    return { statusCode: 400, body: JSON.stringify({ error: "Invalid JSON body" }) };
+  const isAdmin = jwtPayload.email === ADMIN_EMAIL;
+  const isClientYearlyUpgrade = isYearly && jwtPayload.email && !isAdmin;
+  if (!isAdmin && !isClientYearlyUpgrade) {
+    return { statusCode: 403, body: JSON.stringify({ error: "Forbidden" }) };
   }
-
-  const { client_id, client_email, client_name, setup_amount, monthly_amount, trial_days } = body;
   if (!client_id) {
     return { statusCode: 400, body: JSON.stringify({ error: "client_id is required" }) };
   }
@@ -84,13 +87,18 @@ exports.handler = async (event) => {
     // In Checkout subscription mode you can mix one-time and recurring line
     // items. The one-time ones (no `recurring`) are charged on the first
     // invoice automatically — that's how we collect the setup fee.
+    const yearlyAmount = Math.round(monthlyDollars * 12 * 0.8 * 100); // 20% off
     const lineItems = [
       {
         price_data: {
           currency: "usd",
-          product_data: { name: `Koemori — Monthly Service (${businessLabel})` },
-          unit_amount: Math.round(monthlyDollars * 100),
-          recurring: { interval: "month" },
+          product_data: {
+            name: isYearly
+              ? `Koemori — Annual Service (${businessLabel}) · 20% off`
+              : `Koemori — Monthly Service (${businessLabel})`,
+          },
+          unit_amount: isYearly ? yearlyAmount : Math.round(monthlyDollars * 100),
+          recurring: { interval: isYearly ? "year" : "month" },
         },
         quantity: 1,
       },
@@ -130,6 +138,7 @@ exports.handler = async (event) => {
         client_name: businessLabel,
         setup_amount: String(setupDollars),
         monthly_amount: String(monthlyDollars),
+        billing_interval: isYearly ? "year" : "month",
         trial_days: hasTrial ? String(Math.round(trialDays)) : "0",
       },
       success_url: `${appUrl}/?paid=1`,

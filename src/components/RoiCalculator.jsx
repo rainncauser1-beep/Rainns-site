@@ -1,11 +1,15 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { motion, useInView, animate } from "framer-motion";
 import { TrendingUp, Phone, DollarSign } from "lucide-react";
+import { lighten, darken, rgba } from "../lib/accent";
 
 const EASE = [0.22, 1, 0.36, 1];
 
-// Roofing defaults so the number feels real out of the gate
-const ROOFING = { callsPerWeek: 12, missedPct: 50, avgJob: 8500 };
+// Roofing defaults so the number feels real out of the gate. Other verticals
+// pass their own via props (see src/config/vertical-content.js -> roi).
+const ROOFING_DEFAULTS = { callsPerWeek: 12, missedPct: 50, avgJob: 8500, avgJobMin: 500, avgJobMax: 30000 };
+const ROOFING_BLURB =
+  "Most roofers miss over half their inbound calls — storm season, on a roof, after hours. Drag the sliders to your numbers and watch what's walking out the door.";
 
 // Conservative assumption: of the missed calls we now answer, this share
 // become booked jobs. Kept deliberately low — most missed calls are spam,
@@ -36,7 +40,7 @@ function AnimatedNumber({ value, prefix = "", duration = 1.1 }) {
   );
 }
 
-function Slider({ label, value, min, max, step, onChange, format }) {
+function Slider({ label, value, min, max, step, onChange, format, accentHex = "#15325a" }) {
   const pct = ((value - min) / (max - min)) * 100;
   return (
     <div>
@@ -57,17 +61,21 @@ function Slider({ label, value, min, max, step, onChange, format }) {
         onChange={(e) => onChange(Number(e.target.value))}
         className="roi-slider w-full"
         style={{
-          background: `linear-gradient(to right, #15325a 0%, #15325a ${pct}%, #e5e1d8 ${pct}%, #e5e1d8 100%)`,
+          background: `linear-gradient(to right, ${accentHex} 0%, ${accentHex} ${pct}%, #e5e1d8 ${pct}%, #e5e1d8 100%)`,
         }}
       />
     </div>
   );
 }
 
-export default function RoiCalculator() {
-  const [callsPerWeek, setCallsPerWeek] = useState(ROOFING.callsPerWeek);
-  const [missedPct, setMissedPct] = useState(ROOFING.missedPct);
-  const [avgJob, setAvgJob] = useState(ROOFING.avgJob);
+export default function RoiCalculator({ label = "Roofing", defaults, blurb = ROOFING_BLURB, accentHex = "#15325a" }) {
+  const d = { ...ROOFING_DEFAULTS, ...(defaults || {}) };
+  const avgStep = d.avgJobMax <= 3000 ? 25 : 100;
+  const accentLight = lighten(accentHex, 0.5);
+  const accentStrong = darken(accentHex, 0.18);
+  const [callsPerWeek, setCallsPerWeek] = useState(d.callsPerWeek);
+  const [missedPct, setMissedPct] = useState(d.missedPct);
+  const [avgJob, setAvgJob] = useState(d.avgJob);
 
   const sectionRef = useRef(null);
   const inView = useInView(sectionRef, { once: true, margin: "-80px" });
@@ -88,8 +96,8 @@ export default function RoiCalculator() {
       {/* slider thumb styling */}
       <style>{`
         .roi-slider { -webkit-appearance: none; appearance: none; height: 6px; border-radius: 9999px; outline: none; cursor: pointer; }
-        .roi-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 22px; height: 22px; border-radius: 9999px; background: #15325a; border: 3px solid #f5f5f3; box-shadow: 0 1px 4px rgba(11,18,32,0.25); cursor: pointer; }
-        .roi-slider::-moz-range-thumb { width: 22px; height: 22px; border-radius: 9999px; background: #15325a; border: 3px solid #f5f5f3; cursor: pointer; }
+        .roi-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 22px; height: 22px; border-radius: 9999px; background: ${accentHex}; border: 3px solid #f5f5f3; box-shadow: 0 1px 4px rgba(11,18,32,0.25); cursor: pointer; }
+        .roi-slider::-moz-range-thumb { width: 22px; height: 22px; border-radius: 9999px; background: ${accentHex}; border: 3px solid #f5f5f3; cursor: pointer; }
       `}</style>
 
       <div className="max-w-6xl mx-auto">
@@ -99,16 +107,14 @@ export default function RoiCalculator() {
           transition={{ duration: 0.6, ease: EASE }}
           className="mb-10 max-w-2xl"
         >
-          <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-rain-600 mb-4">
+          <div className="font-mono text-[10px] uppercase tracking-[0.22em] mb-4" style={{ color: accentStrong }}>
             The missed-call math
           </div>
           <h2 className="font-display text-4xl md:text-5xl text-slate-900 tracking-tight leading-tight text-balance">
-            See what answering the phone is <span className="italic text-rain-700">actually worth.</span>
+            See what answering the phone is <span className="italic" style={{ color: accentHex }}>actually worth.</span>
           </h2>
           <p className="text-slate-600 mt-4 text-[15px] leading-relaxed">
-            Most roofers miss over half their inbound calls — storm season, on a
-            roof, after hours. Drag the sliders to your numbers and watch what's
-            walking out the door.
+            {blurb}
           </p>
         </motion.div>
 
@@ -121,7 +127,7 @@ export default function RoiCalculator() {
             className="bg-cream-100 border border-slate-900/8 rounded-3xl p-8"
           >
             <div className="inline-flex items-center gap-1.5 mb-8 px-3 py-1.5 rounded-full bg-slate-900 text-cream-100 text-[12px] font-medium">
-              Roofing
+              {label}
             </div>
 
             <div className="space-y-7">
@@ -132,6 +138,7 @@ export default function RoiCalculator() {
                 max={120}
                 step={1}
                 onChange={setCallsPerWeek}
+                accentHex={accentHex}
               />
               <Slider
                 label="% you miss or can't get to"
@@ -141,15 +148,17 @@ export default function RoiCalculator() {
                 step={5}
                 onChange={setMissedPct}
                 format={(v) => `${v}%`}
+                accentHex={accentHex}
               />
               <Slider
                 label="Average job value"
                 value={avgJob}
-                min={500}
-                max={30000}
-                step={100}
+                min={d.avgJobMin}
+                max={d.avgJobMax}
+                step={avgStep}
                 onChange={setAvgJob}
                 format={(v) => `$${v.toLocaleString()}`}
+                accentHex={accentHex}
               />
             </div>
           </motion.div>
@@ -161,9 +170,9 @@ export default function RoiCalculator() {
             transition={{ duration: 0.6, ease: EASE, delay: 0.1 }}
             className="bg-slate-900 text-cream-100 rounded-3xl p-8 md:p-10 relative overflow-hidden flex flex-col justify-center"
           >
-            <div className="absolute -top-24 -right-24 w-80 h-80 rounded-full bg-rain-700/40 blur-[80px]" />
+            <div className="absolute -top-24 -right-24 w-80 h-80 rounded-full blur-[80px]" style={{ background: rgba(accentHex, 0.4) }} />
             <div className="relative">
-              <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-rain-300 mb-3 flex items-center gap-2">
+              <div className="font-mono text-[10px] uppercase tracking-[0.22em] mb-3 flex items-center gap-2" style={{ color: accentLight }}>
                 <TrendingUp className="w-3 h-3" />
                 Revenue you're leaving on the table
               </div>
@@ -173,13 +182,13 @@ export default function RoiCalculator() {
               </div>
               <p className="text-cream-100/70 text-sm leading-relaxed mb-8">
                 That's roughly <strong className="text-cream-100">{jobsRecovered} jobs</strong> a
-                year your competitors are answering for — while you're on a roof,
-                under a sink, or asleep.
+                year your competitors are answering for — while you're on a job,
+                on the road, or asleep.
               </p>
 
               <div className="grid grid-cols-2 gap-3 mb-8">
                 <div className="bg-cream-100/5 border border-cream-100/10 rounded-2xl p-4">
-                  <Phone className="w-4 h-4 text-rain-300 mb-2" />
+                  <Phone className="w-4 h-4 mb-2" style={{ color: accentLight }} />
                   <div className="font-display text-2xl">
                     <AnimatedNumber value={Math.round(callsPerWeek * (missedPct / 100) * WEEKS_PER_YEAR)} />
                   </div>
@@ -188,7 +197,7 @@ export default function RoiCalculator() {
                   </div>
                 </div>
                 <div className="bg-cream-100/5 border border-cream-100/10 rounded-2xl p-4">
-                  <DollarSign className="w-4 h-4 text-rain-300 mb-2" />
+                  <DollarSign className="w-4 h-4 mb-2" style={{ color: accentLight }} />
                   <div className="font-display text-2xl">
                     <AnimatedNumber value={recoveredPerYear} prefix="$" />
                   </div>

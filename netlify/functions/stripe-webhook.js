@@ -86,8 +86,8 @@ exports.handler = async (event) => {
         }
         await updateByClientId(client_id, updates);
 
-        // After the update, fetch the full client record and fire welcome +
-        // owner notification emails. Failures here don't break the webhook.
+        // Fire owner notification only — welcome email is sent manually
+        // from the admin panel so you can test the agent first.
         try {
           const { data: client } = await supabase
             .from("clients")
@@ -95,10 +95,7 @@ exports.handler = async (event) => {
             .eq("id", client_id)
             .maybeSingle();
           if (client) {
-            await Promise.all([
-              sendWelcomeEmail(client),
-              sendOwnerNotification(client, setup_amount, monthly_amount),
-            ]);
+            await sendOwnerNotification(client, setup_amount, monthly_amount);
           }
         } catch (e) {
           console.error("Post-payment email error:", e.message);

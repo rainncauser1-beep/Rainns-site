@@ -15,3 +15,9 @@ dist/
 .idea/
 *.log
 npm-debug.log*
+
+# Internal sales/lead data — never publish (PII)
+koemori-leads/
+
+# Netlify local link state
+.netlify/

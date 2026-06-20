@@ -48,7 +48,7 @@ exports.handler = async (event) => {
   // Look up the client this agent belongs to
   const { data: client, error: clientErr } = await supabase
     .from("clients")
-    .select("id, business_name, owner_name, owner_email, owner_phone, retell_phone_number")
+    .select("id, business_name, owner_name, owner_email, owner_phone, retell_phone_number, monthly_call_limit, calls_this_month, calls_reset_at")
     .eq("retell_agent_id", call.agent_id)
     .maybeSingle();
 
@@ -58,6 +58,20 @@ exports.handler = async (event) => {
   if (!client) {
     console.log("No client found for agent_id:", call.agent_id);
     return ok({ skipped: "client not found" });
+  }
+
+  // Increment call counter (server-side, idempotent via call_id check below)
+  // Only count calls that actually connected (duration > 0)
+  const callDurationMs = (call.start_timestamp && call.end_timestamp)
+    ? call.end_timestamp - call.start_timestamp : 0;
+
+  if (callDurationMs > 5000) { // only count calls longer than 5 seconds
+    const newCount = (client.calls_this_month ?? 0) + 1;
+    await supabase
+      .from("clients")
+      .update({ calls_this_month: newCount })
+      .eq("id", client.id);
+    console.log(`[call-counter] Client ${client.id} (${client.business_name}): ${newCount}/${client.monthly_call_limit ?? "unlimited"} calls this month`);
   }
 
   // Build the call_logs row

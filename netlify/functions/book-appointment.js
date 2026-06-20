@@ -39,9 +39,19 @@ exports.handler = async (event) => {
 
   const { data: client } = await supabase
     .from("clients")
-    .select("id, business_name, cal_event_type_id, cal_timezone")
+    .select("id, business_name, cal_event_type_id, cal_timezone, jobnimbus_api_key")
     .eq("retell_agent_id", agentId)
     .maybeSingle();
+
+  // JobNimbus path — takes priority over Cal.com if connected
+  if (client?.jobnimbus_api_key) {
+    try {
+      return await handleJobNimbus({ client, action, args });
+    } catch (e) {
+      console.error("JobNimbus booking error:", e.message);
+      return reply("I had trouble adding this to JobNimbus — take their details and the team will follow up.");
+    }
+  }
 
   if (!client || !client.cal_event_type_id || !calKey) {
     // Booking not configured — tell the AI to fall back to capturing the request
@@ -199,6 +209,108 @@ function friendlyTime(iso, timeZone) {
   } catch {
     return iso;
   }
+}
+
+// JobNimbus: create contact + appointment task. No availability check exists
+// in the JN API — the AI just asks for a preferred time and books directly.
+async function handleJobNimbus({ client, action, args }) {
+  const apiKey = client.jobnimbus_api_key;
+  const headers = {
+    Authorization: `Bearer ${apiKey}`,
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  };
+  const base = "https://app.jobnimbus.com/api1";
+
+  // check_availability: tell the AI no check is needed, just ask for time
+  if (action === "check_availability") {
+    return reply(
+      "JobNimbus is connected — no availability check needed. " +
+      "Ask the caller what day and time works best for an estimate, then call this function again with action='book' and the time they give you."
+    );
+  }
+
+  // book: create a contact then an appointment task
+  const name = args.caller_name || "New Lead";
+  const [firstName, ...rest] = name.trim().split(" ");
+  const lastName = rest.join(" ") || "";
+  const phone = String(args.caller_phone || "").replace(/\D/g, "");
+  const rawTime = args.start_time || args.preferred_time || "";
+
+  // Create (or find) the contact
+  const contactPayload = {
+    record_type_name: "Customer",
+    status_name: "New Lead",
+    first_name: firstName,
+    last_name: lastName,
+    ...(phone ? { phone } : {}),
+    ...(args.caller_email ? { email: args.caller_email } : {}),
+    source_name: "Koemori AI",
+  };
+
+  let contactId = null;
+  const contactRes = await fetch(`${base}/contacts`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(contactPayload),
+  });
+  if (contactRes.ok) {
+    const contactData = await contactRes.json().catch(() => ({}));
+    contactId = contactData?.jnid || contactData?.id || null;
+  } else {
+    console.error("JN contact create failed:", contactRes.status, await contactRes.text());
+  }
+
+  // Parse the requested time into epoch seconds for JN
+  let dateStart = null;
+  let dateEnd = null;
+  if (rawTime) {
+    const d = new Date(rawTime);
+    if (!isNaN(d.getTime())) {
+      dateStart = Math.floor(d.getTime() / 1000);
+      dateEnd = dateStart + 3600; // default 1 hour estimate
+    }
+  }
+  if (!dateStart) {
+    // No parseable time — still create the lead without a scheduled time
+    const now = Math.floor(Date.now() / 1000);
+    dateStart = now;
+    dateEnd = now + 3600;
+  }
+
+  const taskPayload = {
+    record_type_name: "Appointment",
+    title: `Estimate — ${name}`,
+    date_start: dateStart,
+    date_end: dateEnd,
+    ...(contactId ? { related: [{ id: contactId }] } : {}),
+  };
+
+  const taskRes = await fetch(`${base}/tasks`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(taskPayload),
+  });
+
+  if (!taskRes.ok) {
+    const errText = await taskRes.text();
+    console.error("JN task create failed:", taskRes.status, errText);
+    // Contact was created even if task failed — still a win
+    return reply(
+      contactId
+        ? `Lead added to JobNimbus as ${name}. The appointment scheduling hit an issue — let the caller know the team will call to confirm the exact time.`
+        : "I had trouble adding to JobNimbus — take their details and the team will follow up."
+    );
+  }
+
+  const friendlyBooked = rawTime
+    ? friendlyTime(rawTime, "America/Chicago")
+    : "the requested time";
+
+  return reply(
+    `Booked in JobNimbus. Confirm to the caller: "${name} is set for ${friendlyBooked}." ` +
+    `Tell them the team will send a confirmation and they'll get a reminder before the appointment.`
+  );
 }
 
 function reply(result, extra = {}) {

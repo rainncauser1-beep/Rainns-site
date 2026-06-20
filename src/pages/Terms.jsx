@@ -191,7 +191,7 @@ export default function Terms() {
 
         <H>Contact</H>
         <P>
-          Questions about these Terms? Email <a href="mailto:hello@koemori.ai" className="text-rain-700 underline hover:text-rain-600">hello@koemori.ai</a>.
+          Questions about these Terms? Email <a href="mailto:help@koemori.ai" className="text-rain-700 underline hover:text-rain-600">help@koemori.ai</a>.
           Koemori is a DBA of Driveway Detailers LLC, Nashville, Tennessee.
         </P>
       </motion.div>

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   X, Trash2, Check, Save, AlertCircle, Building2, Phone, Wrench,
   Wifi, ListChecks, StickyNote, Loader2, Sparkles, Copy, CreditCard,
-  ExternalLink, CheckCircle2,
+  ExternalLink, CheckCircle2, Mail,
 } from "lucide-react";
 import { STATUSES, CHECKLIST_STEPS, PAYMENT_STATUSES, emptyClient, saveClient, deleteClient } from "../lib/clients";
 import { supabase } from "../lib/supabase";
@@ -54,9 +54,13 @@ export default function ClientDrawer({ open, client, onClose, onSaved }) {
   const [generatingLink, setGeneratingLink] = useState(false);
   const [checkoutUrl, setCheckoutUrl] = useState("");
   const [linkCopied, setLinkCopied] = useState(false);
+  const [sendingWelcome, setSendingWelcome] = useState(false);
+  const [welcomeSent, setWelcomeSent] = useState(false);
+  const [welcomeError, setWelcomeError] = useState("");
   const [enableBooking, setEnableBooking] = useState(false);
   const [bookingCap, setBookingCap] = useState(6);
   const [trialDays, setTrialDays] = useState("");
+  const [billingInterval, setBillingInterval] = useState("month");
 
   const isEdit = Boolean(client?.id);
 
@@ -210,6 +214,7 @@ export default function ClientDrawer({ open, client, onClose, onSaved }) {
           setup_amount: form.setup_fee === "" ? 0 : setupNum,
           monthly_amount: monthlyNum,
           trial_days: trialDays === "" ? 0 : Number(trialDays),
+          billing_interval: billingInterval,
         }),
       });
 
@@ -220,6 +225,29 @@ export default function ClientDrawer({ open, client, onClose, onSaved }) {
       setError(e.message ?? "Could not generate payment link.");
     } finally {
       setGeneratingLink(false);
+    }
+  };
+
+  const handleSendWelcome = async () => {
+    setSendingWelcome(true);
+    setWelcomeError("");
+    setWelcomeSent(false);
+    try {
+      const sessionRes = await supabase?.auth.getSession();
+      const token = sessionRes?.data?.session?.access_token;
+      if (!token) throw new Error("Not signed in");
+      const res = await fetch("/.netlify/functions/send-welcome-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ client_id: form.id }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to send");
+      setWelcomeSent(true);
+    } catch (e) {
+      setWelcomeError(e.message ?? "Could not send email.");
+    } finally {
+      setSendingWelcome(false);
     }
   };
 
@@ -414,8 +442,24 @@ export default function ClientDrawer({ open, client, onClose, onSaved }) {
                     </button>
                   </div>
 
-                  {/* Auto-create booking calendar toggle (only when none exists yet) */}
-                  {!form.cal_event_type_id && (
+                  {/* Booking calendar setup / cap */}
+                  {form.cal_event_type_id ? (
+                    /* Existing calendar — just show the cap editor */
+                    <div className="flex items-center gap-2 mb-3 text-[12px] text-slate-700">
+                      <span className="text-emerald-600 font-medium">Cal.com calendar active</span>
+                      <span className="text-slate-400">·</span>
+                      <span>Max</span>
+                      <input
+                        type="number"
+                        min="1"
+                        max="50"
+                        value={bookingCap}
+                        onChange={(e) => setBookingCap(e.target.value)}
+                        className="w-12 bg-cream-100 border border-slate-900/10 rounded px-1.5 py-0.5 text-[12px] text-center"
+                      />
+                      <span>estimates/day — updates on Re-provision</span>
+                    </div>
+                  ) : (
                     <label className="flex items-center gap-2 mb-3 text-[12px] text-slate-700 cursor-pointer select-none">
                       <input
                         type="checkbox"
@@ -513,6 +557,78 @@ export default function ClientDrawer({ open, client, onClose, onSaved }) {
                   </Field>
                 </div>
 
+                {/* Billing interval toggle */}
+                <div className="mb-4">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-[0.08em]">Billing interval</span>
+                    {billingInterval === "year" && Number(form.monthly_recurring) > 0 && (
+                      <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                        Client saves ${(Number(form.monthly_recurring) * 12 * 0.2).toLocaleString(undefined, {maximumFractionDigits:0})}/yr
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex rounded-xl border border-slate-200 overflow-hidden text-sm font-medium">
+                    <button
+                      type="button"
+                      onClick={() => setBillingInterval("month")}
+                      className={`flex-1 py-2 transition ${billingInterval === "month" ? "bg-slate-900 text-white" : "bg-white text-slate-500 hover:bg-slate-50"}`}
+                    >
+                      Monthly
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBillingInterval("year")}
+                      className={`flex-1 py-2 transition ${billingInterval === "year" ? "bg-slate-900 text-white" : "bg-white text-slate-500 hover:bg-slate-50"}`}
+                    >
+                      Yearly <span className={`text-[11px] font-semibold ml-1 ${billingInterval === "year" ? "text-emerald-300" : "text-emerald-600"}`}>−20%</span>
+                    </button>
+                  </div>
+                  {billingInterval === "year" && Number(form.monthly_recurring) > 0 && (
+                    <div className="mt-2 p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
+                      <div className="flex justify-between text-[13px] text-emerald-800 mb-1">
+                        <span>Monthly equivalent</span>
+                        <span className="font-mono tabular-nums line-through text-slate-400">${Number(form.monthly_recurring).toLocaleString()}/mo</span>
+                      </div>
+                      <div className="flex justify-between text-[13px] font-semibold text-emerald-800 mb-1">
+                        <span>Annual rate (−20%)</span>
+                        <span className="font-mono tabular-nums">${(Number(form.monthly_recurring) * 0.8).toLocaleString(undefined, {maximumFractionDigits:0})}/mo</span>
+                      </div>
+                      <div className="flex justify-between text-[14px] font-bold text-emerald-900 pt-1 border-t border-emerald-200">
+                        <span>Billed annually</span>
+                        <span className="font-mono tabular-nums">${(Number(form.monthly_recurring) * 12 * 0.8).toLocaleString(undefined, {maximumFractionDigits:0})}/yr</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Monthly call limit */}
+                <div className="mb-4">
+                  <Field label="Monthly call limit" hint="Max calls the AI answers per month. 0 = unlimited. Calls over limit get a polite 'at capacity' message.">
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min="0"
+                        step="50"
+                        className={inputCls}
+                        value={form.monthly_call_limit ?? ""}
+                        onChange={update("monthly_call_limit")}
+                        placeholder="0 (unlimited)"
+                      />
+                    </div>
+                    {form.monthly_call_limit > 0 && (
+                      <div className="mt-1.5 text-[11px] text-slate-500">
+                        Current usage this month:&nbsp;
+                        <span className="font-mono font-semibold text-slate-700">
+                          {form.calls_this_month ?? 0} / {form.monthly_call_limit}
+                        </span>
+                        {(form.calls_this_month ?? 0) >= form.monthly_call_limit && (
+                          <span className="ml-2 text-rose-600 font-semibold">⚠ Limit reached</span>
+                        )}
+                      </div>
+                    )}
+                  </Field>
+                </div>
+
                 {/* Free trial */}
                 <div className="mb-4">
                   <Field label="Free trial (days)" hint="Optional — delays the first monthly charge. Setup fee still bills today. Leave blank for none.">
@@ -557,9 +673,11 @@ export default function ClientDrawer({ open, client, onClose, onSaved }) {
                       </span>
                     </div>
                     <div className="mt-1.5 text-[11px] text-slate-500">
-                      {Number(trialDays) > 0
-                        ? `Then $${Number(form.monthly_recurring || 0).toLocaleString()}/mo starting in ${Number(trialDays)} days`
-                        : `Then $${Number(form.monthly_recurring || 0).toLocaleString()}/mo recurring`}
+                      {billingInterval === "year"
+                        ? `Then $${(Number(form.monthly_recurring || 0) * 12 * 0.8).toLocaleString(undefined,{maximumFractionDigits:0})}/yr recurring (20% off)`
+                        : Number(trialDays) > 0
+                          ? `Then $${Number(form.monthly_recurring || 0).toLocaleString()}/mo starting in ${Number(trialDays)} days`
+                          : `Then $${Number(form.monthly_recurring || 0).toLocaleString()}/mo recurring`}
                     </div>
                   </div>
                 )}
@@ -631,6 +749,33 @@ export default function ClientDrawer({ open, client, onClose, onSaved }) {
                     </div>
                   )}
                 </div>
+
+                {/* Manual welcome email */}
+                {form.id && form.owner_email && (
+                  <div className="mt-4 pt-4 border-t border-slate-900/6">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <div className="text-sm font-medium text-slate-900 mb-0.5">Send welcome email</div>
+                        <p className="text-[12px] text-slate-500">Sends the setup guide to {form.owner_email}. Only send after you've tested the agent.</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleSendWelcome}
+                        disabled={sendingWelcome || welcomeSent}
+                        className="flex-shrink-0 inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-full text-[12px] font-medium transition disabled:opacity-50"
+                      >
+                        {sendingWelcome ? (
+                          <><Loader2 className="w-3 h-3 animate-spin" />Sending…</>
+                        ) : welcomeSent ? (
+                          <><Check className="w-3 h-3" />Sent!</>
+                        ) : (
+                          <><Mail className="w-3 h-3" />Send welcome</>
+                        )}
+                      </button>
+                    </div>
+                    {welcomeError && <p className="mt-2 text-[11px] text-rose-600">{welcomeError}</p>}
+                  </div>
+                )}
               </Section>
 
               {/* Checklist */}

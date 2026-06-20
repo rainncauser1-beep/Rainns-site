@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Search, Phone, Mail, RefreshCw, Users } from "lucide-react";
+import { Plus, Search, Phone, RefreshCw, Users, PhoneCall, X, ChevronDown, ChevronUp, BarChart3, Clock } from "lucide-react";
 import { STATUSES, CHECKLIST_STEPS, PAYMENT_STATUSES, listClients, checklistProgress } from "../lib/clients";
 import ClientDrawer from "./ClientDrawer";
+import { supabase } from "../lib/supabase";
 
 const EASE = [0.22, 1, 0.36, 1];
 
@@ -125,11 +126,183 @@ function KanbanColumn({ status, clients, onCardClick }) {
   );
 }
 
+function fmtPhone(p) {
+  if (!p) return "Unknown";
+  const d = String(p).replace(/\D/g, "");
+  if (d.length === 11 && d.startsWith("1")) return `(${d.slice(1,4)}) ${d.slice(4,7)}-${d.slice(7)}`;
+  if (d.length === 10) return `(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}`;
+  return p;
+}
+
+function fmtDur(sec) {
+  if (!sec) return "—";
+  if (sec < 60) return `${sec}s`;
+  return `${Math.floor(sec / 60)}m ${sec % 60}s`;
+}
+
+function fmtAgo(iso) {
+  if (!iso) return "—";
+  const diff = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+  if (diff < 1) return "Just now";
+  if (diff < 60) return `${diff}m ago`;
+  if (diff < 1440) return `${Math.round(diff / 60)}h ago`;
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function ClientActivityPanel({ client, onClose, onEdit }) {
+  const [calls, setCalls] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [expandedCall, setExpandedCall] = useState(null);
+
+  useEffect(() => {
+    if (!supabase || !client?.id) return;
+    setLoading(true);
+    supabase
+      .from("call_logs")
+      .select("*")
+      .eq("client_id", client.id)
+      .order("started_at", { ascending: false })
+      .limit(50)
+      .then(({ data }) => { setCalls(data || []); setLoading(false); });
+  }, [client?.id]);
+
+  const used = client.calls_this_month ?? 0;
+  const limit = client.monthly_call_limit ?? 0;
+  const pct = limit > 0 ? Math.min((used / limit) * 100, 100) : 0;
+  const thisWeek = calls.filter(c => c.started_at && (Date.now() - new Date(c.started_at)) < 7 * 86400000).length;
+
+  return (
+    <div className="fixed inset-0 z-50 flex">
+      <div className="flex-1 bg-slate-900/40 backdrop-blur-sm" onClick={onClose} />
+      <motion.div
+        initial={{ x: "100%" }}
+        animate={{ x: 0 }}
+        exit={{ x: "100%" }}
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        className="w-full max-w-xl bg-cream-100 overflow-y-auto flex flex-col"
+      >
+        {/* Header */}
+        <div className="sticky top-0 z-10 bg-cream-100/95 backdrop-blur-sm border-b border-slate-900/8 px-6 py-4 flex items-center justify-between">
+          <div>
+            <div className="font-display text-xl text-slate-900 tracking-tight">{client.business_name}</div>
+            <div className="font-mono text-[10px] uppercase tracking-wider text-slate-500 mt-0.5">{client.owner_name}</div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onEdit}
+              className="px-3 py-1.5 rounded-full bg-slate-900 text-cream-100 text-[12px] font-medium hover:bg-rain-700 transition"
+            >Edit client</button>
+            <button onClick={onClose} className="w-8 h-8 rounded-full bg-cream-200 flex items-center justify-center hover:bg-cream-300 transition">
+              <X className="w-4 h-4 text-slate-600" />
+            </button>
+          </div>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { label: "This week", value: thisWeek },
+              { label: "This month", value: used },
+              { label: "All time", value: calls.length },
+            ].map((s) => (
+              <div key={s.label} className="bg-cream-50 border border-slate-900/8 rounded-2xl p-4 text-center">
+                <div className="font-display text-3xl text-slate-900 tracking-tight">{s.value}</div>
+                <div className="font-mono text-[10px] uppercase tracking-wider text-slate-500 mt-1">{s.label}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Usage bar */}
+          {limit > 0 && (
+            <div className="bg-cream-50 border border-slate-900/8 rounded-2xl p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-mono text-[10px] uppercase tracking-wider text-slate-500">Monthly limit</span>
+                <span className="font-mono text-[11px] text-slate-700">{used} / {limit}</span>
+              </div>
+              <div className="h-2 bg-cream-200 rounded-full overflow-hidden">
+                <div className={`h-full rounded-full transition-all ${pct >= 90 ? "bg-rose-500" : pct >= 70 ? "bg-amber-500" : "bg-emerald-500"}`} style={{ width: `${pct}%` }} />
+              </div>
+              <div className="text-[11px] text-slate-500 mt-1.5">Resets {client.calls_reset_at ? new Date(client.calls_reset_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "next month"}</div>
+            </div>
+          )}
+
+          {/* Call log */}
+          <div>
+            <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-rain-600 mb-3 flex items-center gap-2">
+              <PhoneCall className="w-3 h-3" /> Call log
+            </div>
+            {loading ? (
+              <div className="text-center py-10 text-slate-400 text-sm">Loading…</div>
+            ) : calls.length === 0 ? (
+              <div className="bg-cream-50 border border-slate-900/8 rounded-2xl p-8 text-center text-slate-500 text-sm">No calls yet</div>
+            ) : (
+              <div className="space-y-2">
+                {calls.map((call) => (
+                  <div key={call.id} className="bg-cream-50 border border-slate-900/8 rounded-2xl overflow-hidden">
+                    <button
+                      onClick={() => setExpandedCall(expandedCall === call.id ? null : call.id)}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-cream-100 transition"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-rain-100 flex items-center justify-center flex-shrink-0">
+                        <PhoneCall className="w-3.5 h-3.5 text-rain-700" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-[13px] text-slate-900">{fmtPhone(call.from_number)}</div>
+                        <div className="text-[11px] text-slate-500 truncate">{call.summary || "No summary"}</div>
+                      </div>
+                      <div className="text-right flex-shrink-0 mr-2">
+                        <div className="font-mono text-[10px] text-slate-500">{fmtAgo(call.started_at)}</div>
+                        <div className="font-mono text-[10px] text-slate-400">{fmtDur(call.duration_seconds)}</div>
+                      </div>
+                      {expandedCall === call.id ? <ChevronUp className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" /> : <ChevronDown className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />}
+                    </button>
+                    <AnimatePresence>
+                      {expandedCall === call.id && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="overflow-hidden border-t border-slate-900/6"
+                        >
+                          <div className="px-4 py-3 space-y-3">
+                            {call.summary && (
+                              <div>
+                                <div className="font-mono text-[9px] uppercase tracking-wider text-slate-500 mb-1">Summary</div>
+                                <p className="text-[12px] text-slate-700 leading-relaxed">{call.summary}</p>
+                              </div>
+                            )}
+                            {call.transcript && (
+                              <div>
+                                <div className="font-mono text-[9px] uppercase tracking-wider text-slate-500 mb-1">Transcript</div>
+                                <pre className="text-[11px] text-slate-600 bg-cream-100 rounded-lg p-3 whitespace-pre-wrap font-mono max-h-48 overflow-y-auto leading-relaxed">{call.transcript}</pre>
+                              </div>
+                            )}
+                            <a href={`tel:${(call.from_number || "").replace(/\D/g, "")}`} className="inline-flex items-center gap-1.5 bg-slate-900 text-cream-100 px-3 py-1.5 rounded-full text-[11px] font-medium hover:bg-rain-700 transition">
+                              <Phone className="w-3 h-3" /> Call back
+                            </a>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 export default function ClientsManager() {
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [drawer, setDrawer] = useState({ open: false, client: null });
+  const [activity, setActivity] = useState(null);
 
   const fetch = async () => {
     setLoading(true);
@@ -218,11 +391,21 @@ export default function ClientsManager() {
               key={s.id}
               status={s}
               clients={grouped[s.id]}
-              onCardClick={(c) => setDrawer({ open: true, client: c })}
+              onCardClick={(c) => setActivity(c)}
             />
           ))}
         </div>
       )}
+
+      <AnimatePresence>
+        {activity && (
+          <ClientActivityPanel
+            client={activity}
+            onClose={() => setActivity(null)}
+            onEdit={() => { setDrawer({ open: true, client: activity }); setActivity(null); }}
+          />
+        )}
+      </AnimatePresence>
 
       <ClientDrawer
         open={drawer.open}

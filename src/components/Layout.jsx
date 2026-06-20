@@ -4,19 +4,35 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowUpRight, Menu, X, Mail, MapPin, LogIn, LayoutDashboard } from "lucide-react";
 import RaindropMark from "./RaindropMark";
 import { supabase } from "../lib/supabase";
+import { verticalFromPath, LIVE_VERTICALS } from "../config/verticals";
 
 const EASE = [0.22, 1, 0.36, 1];
 
-const navLinks = [
-  { to: "/automations", label: "What You Get" },
-  { to: "/get-started", label: "How It Works" },
-];
+// Nav adapts to the active trade. Roofing (the bespoke flagship) keeps its rich
+// sub-nav; template verticals + the brand hub get a lean cross-trade nav.
+function getNavLinks(active) {
+  if (active?.slug === "roofing") {
+    return [
+      { to: "/roofing/features", label: "What You Get" },
+      { to: "/permit-intelligence", label: "Permit Intelligence" },
+      { to: "/roofing/get-started", label: "How It Works" },
+      { to: "/blog", label: "Blog" },
+    ];
+  }
+  return [
+    { to: "/services", label: "All Trades" },
+    { to: "/blog", label: "Blog" },
+  ];
+}
 
 function Nav() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [user, setUser] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const location = useLocation();
+  const navLinks = getNavLinks(verticalFromPath(location.pathname));
+  const ADMIN_EMAIL = "rainn.causer1@gmail.com";
 
   useEffect(() => {
     setMobileOpen(false);
@@ -30,10 +46,16 @@ function Nav() {
 
   useEffect(() => {
     if (!supabase) return;
-    supabase.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null));
-    const { data: listener } = supabase.auth.onAuthStateChange((_e, session) =>
-      setUser(session?.user ?? null)
-    );
+    supabase.auth.getSession().then(({ data }) => {
+      const u = data.session?.user ?? null;
+      setUser(u);
+      setIsAdmin(u?.email === ADMIN_EMAIL);
+    });
+    const { data: listener } = supabase.auth.onAuthStateChange((_e, session) => {
+      const u = session?.user ?? null;
+      setUser(u);
+      setIsAdmin(u?.email === ADMIN_EMAIL);
+    });
     return () => listener.subscription.unsubscribe();
   }, []);
 
@@ -80,7 +102,16 @@ function Nav() {
           </nav>
 
           <div className="flex items-center gap-2">
-            {user ? (
+            {!user && (
+              <Link
+                to="/portal/login"
+                className="hidden md:inline-flex items-center gap-1.5 text-slate-600 hover:text-slate-900 px-3 py-2 rounded-full text-[13px] font-medium transition"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                Sign in
+              </Link>
+            )}
+            {user && isAdmin && (
               <Link
                 to="/admin"
                 className="hidden md:inline-flex items-center gap-1.5 text-slate-700 hover:text-slate-900 px-3 py-2 rounded-full text-[13px] font-medium transition"
@@ -88,13 +119,14 @@ function Nav() {
                 <LayoutDashboard className="w-3.5 h-3.5" />
                 Dashboard
               </Link>
-            ) : (
+            )}
+            {user && !isAdmin && (
               <Link
-                to="/login"
-                className="hidden md:inline-flex items-center gap-1.5 text-slate-600 hover:text-slate-900 px-3 py-2 rounded-full text-[13px] font-medium transition"
+                to="/portal"
+                className="hidden md:inline-flex items-center gap-1.5 text-slate-700 hover:text-slate-900 px-3 py-2 rounded-full text-[13px] font-medium transition"
               >
-                <LogIn className="w-3.5 h-3.5" />
-                Sign in
+                <LayoutDashboard className="w-3.5 h-3.5" />
+                My Portal
               </Link>
             )}
             <Link
@@ -147,7 +179,16 @@ function Nav() {
               ))}
             </nav>
             <div className="mt-auto mb-8 space-y-2">
-              {user ? (
+              {!user && (
+                <Link
+                  to="/portal/login"
+                  className="flex items-center justify-center gap-2 bg-cream-200 border border-slate-900/10 text-slate-800 py-3.5 rounded-full font-medium"
+                >
+                  <LogIn className="w-4 h-4" />
+                  Sign in
+                </Link>
+              )}
+              {user && isAdmin && (
                 <Link
                   to="/admin"
                   className="flex items-center justify-center gap-2 bg-cream-200 border border-slate-900/10 text-slate-800 py-3.5 rounded-full font-medium"
@@ -155,13 +196,14 @@ function Nav() {
                   <LayoutDashboard className="w-4 h-4" />
                   Dashboard
                 </Link>
-              ) : (
+              )}
+              {user && !isAdmin && (
                 <Link
-                  to="/login"
+                  to="/portal"
                   className="flex items-center justify-center gap-2 bg-cream-200 border border-slate-900/10 text-slate-800 py-3.5 rounded-full font-medium"
                 >
-                  <LogIn className="w-4 h-4" />
-                  Sign in
+                  <LayoutDashboard className="w-4 h-4" />
+                  My Portal
                 </Link>
               )}
               <Link
@@ -184,7 +226,7 @@ function Footer() {
     <footer className="border-t border-slate-900/8 py-16 px-6 bg-cream-50">
       <div className="max-w-7xl mx-auto">
         <div className="grid md:grid-cols-12 gap-10 mb-12">
-          <div className="md:col-span-5">
+          <div className="md:col-span-4">
             <Link to="/" className="flex items-center gap-2.5 mb-5">
               <RaindropMark size={24} />
               <span className="font-display text-xl text-slate-900 tracking-tight">
@@ -194,19 +236,33 @@ function Footer() {
             <p className="text-sm text-slate-600 max-w-sm leading-relaxed">
               <strong className="text-slate-800">Koemori</strong> — from the Japanese
               声 <em>(koe, "voice")</em> + 守り <em>(mamori, "to guard")</em>: the voice that
-              guards your roofing business. Every call answered, every job caught — even when
-              you're on the roof.
+              guards your business. Every call answered, every job caught — even when you're
+              out in the field.
             </p>
             <div className="mt-5 space-y-2">
-              <div className="inline-flex items-center gap-2 text-[13px] text-slate-600">
+              <a href="mailto:help@koemori.ai" className="inline-flex items-center gap-2 text-[13px] text-slate-600 hover:text-rain-700 transition">
                 <Mail className="w-3.5 h-3.5 text-rain-500" />
-                hello@koemori.ai
-              </div>
+                help@koemori.ai
+              </a>
               <div className="flex items-center gap-2 text-[13px] text-slate-600">
                 <MapPin className="w-3.5 h-3.5 text-rain-500" />
                 Nashville, TN · 615 / 629
               </div>
             </div>
+          </div>
+          <div className="md:col-span-3">
+            <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-4">
+              Built For
+            </div>
+            <ul className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm text-slate-600">
+              {LIVE_VERTICALS.map((v) => (
+                <li key={v.slug}>
+                  <Link to={v.to} className="hover:text-slate-900 transition">
+                    {v.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </div>
           <div className="md:col-span-2">
             <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-4">
@@ -214,13 +270,13 @@ function Footer() {
             </div>
             <ul className="space-y-2 text-sm text-slate-600">
               <li>
-                <Link to="/automations" className="hover:text-slate-900 transition">
-                  What You Get
+                <Link to="/" className="hover:text-slate-900 transition">
+                  All Trades
                 </Link>
               </li>
               <li>
-                <Link to="/get-started" className="hover:text-slate-900 transition">
-                  How It Works
+                <Link to="/blog" className="hover:text-slate-900 transition">
+                  Blog
                 </Link>
               </li>
               <li>
@@ -228,17 +284,6 @@ function Footer() {
                   Get Set Up
                 </Link>
               </li>
-            </ul>
-          </div>
-          <div className="md:col-span-2">
-            <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-4">
-              Built For
-            </div>
-            <ul className="space-y-2 text-sm text-slate-600">
-              <li>Residential roofers</li>
-              <li>Commercial roofing</li>
-              <li>Storm &amp; restoration</li>
-              <li>Repair &amp; service</li>
             </ul>
           </div>
           <div className="md:col-span-3">

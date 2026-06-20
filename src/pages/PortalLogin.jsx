@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Mail, ArrowRight, CheckCircle2 } from "lucide-react";
 import { supabase } from "../lib/supabase";
@@ -8,7 +8,8 @@ import RaindropMark from "../components/RaindropMark";
 const EASE = [0.22, 1, 0.36, 1];
 
 export default function PortalLogin() {
-  const [email, setEmail] = useState("");
+  const [searchParams] = useSearchParams();
+  const [email, setEmail] = useState(searchParams.get("email") || "");
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -24,26 +25,23 @@ export default function PortalLogin() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!supabase) {
-      setError("Auth backend not configured.");
-      return;
-    }
     setLoading(true);
     setError("");
 
-    const { error: authError } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/portal`,
-      },
-    });
-
-    setLoading(false);
-    if (authError) {
-      setError(authError.message);
-      return;
+    try {
+      const res = await fetch("/.netlify/functions/send-magic-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Could not send sign-in link.");
+      setSent(true);
+    } catch (e) {
+      setError(e.message || "Something went wrong. Try again.");
+    } finally {
+      setLoading(false);
     }
-    setSent(true);
   };
 
   return (

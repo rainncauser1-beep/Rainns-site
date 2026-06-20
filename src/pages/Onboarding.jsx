@@ -105,9 +105,14 @@ export default function Onboarding() {
           <h1 className="font-display text-4xl md:text-5xl text-slate-900 tracking-tight leading-tight mb-4">
             You're in, {form.owner_name.split(" ")[0] || "let's go"}.
           </h1>
-          <p className="text-lg text-slate-600 leading-relaxed mb-8">
-            Everything about {form.business_name || "your business"} is saved. Last step —
-            grab a 15-minute slot and we'll walk through your AI together, live.
+          <p className="text-lg text-slate-600 leading-relaxed mb-4">
+            Everything about {form.business_name || "your business"} is saved.
+            {form.owner_email && (
+              <> We just emailed <strong>{form.owner_email}</strong> a link to your client portal so you can see your dashboard.</>
+            )}
+          </p>
+          <p className="text-base text-slate-500 leading-relaxed mb-8">
+            Last step — grab a 15-minute slot and we'll walk through your AI together, live.
           </p>
           <a
             href={CAL_LINK}

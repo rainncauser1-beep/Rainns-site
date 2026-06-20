@@ -24,6 +24,12 @@ export default function ContactSection() {
     // We record whether they actually checked the box so we only text the
     // ones who opted in.
     await saveContactSubmission({ ...form, sms_consent: consent });
+    // Fire auto-reply — best effort, never block the success state
+    fetch("/.netlify/functions/help-autoreply", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: form.name, email: form.email }),
+    }).catch(() => {});
     setSubmitted(true);
     setLoading(false);
   };

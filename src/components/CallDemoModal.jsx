@@ -60,7 +60,17 @@ function CallTimer({ running }) {
   return <span className="font-mono text-2xl text-slate-900 tabular-nums">{m}:{s}</span>;
 }
 
-export default function CallDemoModal({ open, onClose }) {
+const ROOFING_TRADE_OPTIONS = [
+  "residential roofing",
+  "commercial roofing",
+  "storm & restoration",
+  "repair & maintenance",
+  "roofing",
+];
+
+const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
+export default function CallDemoModal({ open, onClose, tradeOptions = ROOFING_TRADE_OPTIONS }) {
   // step: email | ready | calling | ended | exhausted
   const [step, setStep] = useState("email");
   const [email, setEmail] = useState("");
@@ -286,11 +296,9 @@ export default function CallDemoModal({ open, onClose }) {
                       className="w-full bg-cream-100 border border-slate-900/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-rain-500 transition text-slate-700"
                     >
                       <option value="">Your focus (optional)</option>
-                      <option value="residential roofing">Residential roofing</option>
-                      <option value="commercial roofing">Commercial roofing</option>
-                      <option value="storm & restoration">Storm &amp; restoration</option>
-                      <option value="repair & maintenance">Repair &amp; maintenance</option>
-                      <option value="roofing">General roofing</option>
+                      {tradeOptions.map((t) => (
+                        <option key={t} value={t}>{cap(t)}</option>
+                      ))}
                     </select>
                   </div>
 
