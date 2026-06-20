@@ -91,7 +91,7 @@ function buildWelcomeEmail(client) {
   <div style="max-width:600px;margin:40px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
     <div style="background:#0b1220;padding:32px 40px;">
       <p style="margin:0;font-size:22px;font-weight:700;color:#fff;letter-spacing:-0.02em;">Koemori</p>
-      <p style="margin:6px 0 0;font-size:14px;color:#94a3b8;">AI receptionist for roofing contractors</p>
+      <p style="margin:6px 0 0;font-size:14px;color:#94a3b8;">AI receptionist for home-service businesses</p>
     </div>
     <div style="padding:40px;">
       <h1 style="margin:0 0 16px;font-size:26px;font-weight:700;color:#0b1220;letter-spacing:-0.02em;">You're live, ${escapeHtml(name)}.</h1>
@@ -102,7 +102,7 @@ function buildWelcomeEmail(client) {
       </div>
     </div>
     <div style="padding:20px 40px;background:#f9fafb;border-top:1px solid #e5e7eb;">
-      <p style="margin:0;font-size:12px;color:#9ca3af;text-align:center;">Koemori · AI Receptionist for Roofing Contractors · <a href="https://koemori.ai" style="color:#9ca3af;">koemori.ai</a></p>
+      <p style="margin:0;font-size:12px;color:#9ca3af;text-align:center;">Koemori · AI Receptionist for Home-Service Businesses · <a href="https://koemori.ai" style="color:#9ca3af;">koemori.ai</a></p>
     </div>
   </div>
 </body></html>`;

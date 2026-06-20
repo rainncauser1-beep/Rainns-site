@@ -276,7 +276,7 @@ function sendWelcomeEmail(client) {
         </div>
 
         <p style="margin:12px 0 0;font-size:13px;color:#d1fae5;background:#065f46;padding:12px 16px;border-radius:8px;line-height:1.6;">
-          💡 <strong>How roofers use this:</strong> Turn AI ON when you head to a job site. Turn it OFF when you're back in the office. Your customers always call your same number — the AI catches what you can't.
+          💡 <strong>How to use it:</strong> Turn AI ON when you head out on a job. Turn it OFF when you're back in the office. Your customers always call your same number — the AI catches what you can't.
         </p>
       </div>
     </div>

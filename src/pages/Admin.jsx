@@ -115,6 +115,8 @@ export default function Admin() {
   const [data, setData] = useState({ trials: [], contacts: [], waitlist: [] });
   const [accessLog, setAccessLog] = useState([]);
   const [accessLoading, setAccessLoading] = useState(false);
+  const [demoBusy, setDemoBusy] = useState(false);
+  const [demoMsg, setDemoMsg] = useState("");
 
   // Hard guard: verify the signed-in email is the admin before loading any data
   useEffect(() => {
@@ -170,6 +172,28 @@ export default function Admin() {
   const signOut = async () => {
     await supabase?.auth.signOut();
     navigate("/login");
+  };
+
+  // Create / refresh the public "Try the AI" demo agents (one per trade + default).
+  const provisionDemoAgents = async () => {
+    setDemoBusy(true);
+    setDemoMsg("");
+    try {
+      const token = (await supabase?.auth.getSession())?.data?.session?.access_token;
+      if (!token) throw new Error("Not signed in");
+      const res = await fetch("/.netlify/functions/provision-demo-agents", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(d.error || `HTTP ${res.status}`);
+      const failed = (d.results || []).filter((r) => !r.ok);
+      setDemoMsg(failed.length ? `${d.summary} · failed: ${failed.map((f) => f.slug).join(", ")}` : `✓ ${d.summary}`);
+    } catch (e) {
+      setDemoMsg("Error: " + e.message);
+    } finally {
+      setDemoBusy(false);
+    }
   };
 
   const totalCalls = data.trials.reduce((sum, t) => sum + (t.tries_used ?? 0), 0);
@@ -286,6 +310,28 @@ export default function Admin() {
                   tone="amber"
                 />
               </div>
+
+              {/* Demo agents */}
+              <motion.div
+                variants={fadeUp}
+                className="bg-cream-50 border border-slate-900/8 rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+              >
+                <div>
+                  <div className="font-display text-xl text-slate-900 tracking-tight mb-1">Demo agents</div>
+                  <p className="text-slate-600 text-sm max-w-xl leading-relaxed">
+                    Create or refresh the public "Try the AI" agent for every trade (one per trade plus a generic default). Free — these are web-call agents, no phone numbers. Run the <code className="bg-cream-200 px-1 rounded text-[12px]">demo_agents</code> migration first.
+                  </p>
+                  {demoMsg && <p className="text-[13px] mt-2 font-medium text-slate-700">{demoMsg}</p>}
+                </div>
+                <button
+                  onClick={provisionDemoAgents}
+                  disabled={demoBusy}
+                  className="inline-flex items-center gap-2 bg-slate-900 text-cream-100 px-5 py-2.5 rounded-full text-sm font-medium hover:bg-rain-700 transition disabled:opacity-50 flex-shrink-0"
+                >
+                  {demoBusy ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Phone className="w-4 h-4" />}
+                  {demoBusy ? "Creating…" : "Create / refresh demo agents"}
+                </button>
+              </motion.div>
 
               <DataTable
                 title="Demo Trials"

@@ -70,7 +70,7 @@ const ROOFING_TRADE_OPTIONS = [
 
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
-export default function CallDemoModal({ open, onClose, tradeOptions = ROOFING_TRADE_OPTIONS }) {
+export default function CallDemoModal({ open, onClose, tradeOptions = ROOFING_TRADE_OPTIONS, vertical }) {
   // step: email | ready | calling | ended | exhausted
   const [step, setStep] = useState("email");
   const [email, setEmail] = useState("");
@@ -137,6 +137,7 @@ export default function CallDemoModal({ open, onClose, tradeOptions = ROOFING_TR
           email: email || undefined,
           business_name: bizName.trim() || undefined,
           trade: trade || undefined,
+          vertical: vertical || undefined,
         }),
       });
       if (!res.ok) throw new Error("Could not start call. Please try again.");

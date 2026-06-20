@@ -252,7 +252,7 @@ async function sendLeadSMS(client, call, row) {
   const businessName = client.business_name || "your business";
   const cd = call.call_analysis?.custom_analysis_data || {};
 
-  // Build a tight, useful SMS: the name/where/what the roofer needs to act on,
+  // Build a tight, useful SMS: the name/where/what the owner needs to act on,
   // not the whole summary.
   const parts = [];
   parts.push(`🔔 ${businessName} lead`);

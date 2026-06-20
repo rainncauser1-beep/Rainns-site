@@ -196,7 +196,7 @@ function buildWeeklyEmail(client, { thisCount, lastCount, avgDur, top3 }) {
   <!-- AI saved you callout -->
   <div style="background:#e8f0f8; border-left:4px solid #15325a; border-radius:10px; padding:16px 20px; margin-bottom:14px;">
     <p style="margin:0; font-size:14px; color:#0b1220; line-height:1.65;">
-      <strong>Your AI saved you ${thisCount} call${thisCount !== 1 ? "s" : ""} from going to voicemail</strong> this week — that's ${thisCount} potential roofing job${thisCount !== 1 ? "s" : ""} captured instead of missed while you were on site.
+      <strong>Your AI saved you ${thisCount} call${thisCount !== 1 ? "s" : ""} from going to voicemail</strong> this week — that's ${thisCount} potential job${thisCount !== 1 ? "s" : ""} captured instead of missed while you were out on the job.
     </p>
   </div>
 
@@ -230,7 +230,7 @@ function buildWeeklyEmail(client, { thisCount, lastCount, avgDur, top3 }) {
   <!-- Footer -->
   <div style="text-align:center; padding-top:16px; border-top:1px solid #e2e8f0;">
     <p style="font-size:12px; color:#94a3b8; margin:0; line-height:1.7;">
-      Sent every Monday by <strong style="color:#0b1220;">Koemori</strong> · AI receptionist for roofers<br>
+      Sent every Monday by <strong style="color:#0b1220;">Koemori</strong> · AI receptionist for home-service businesses<br>
       <a href="mailto:help@koemori.ai" style="color:#94a3b8; text-decoration:underline;">Reply to unsubscribe</a>
     </p>
   </div>

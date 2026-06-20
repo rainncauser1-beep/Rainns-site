@@ -217,4 +217,40 @@ function buildPrompt(c, opts = {}) {
   return lines.join("\n");
 }
 
-module.exports = { BACKEND_VERTICALS, getBackendVertical, buildPrompt, postCallFields };
+// ---------------------------------------------------------------------------
+// DEMO agents — the public "Try the AI" web-call agent, one per trade + a
+// generic default. Greets the SAME trade-neutral way for every trade; the
+// difference is what it knows to ask about. No booking, no real business.
+// ---------------------------------------------------------------------------
+
+const DEMO_GREETING = "Thanks for calling! How can I help you today?";
+const GENERIC_QUALIFY = "what service they need, where they're located, and how soon they need it";
+
+function buildDemoPrompt(verticalSlug) {
+  const isGeneric = !verticalSlug || verticalSlug === "default" || !BACKEND_VERTICALS[verticalSlug];
+  const qualify = isGeneric ? GENERIC_QUALIFY : BACKEND_VERTICALS[verticalSlug].qualify;
+  const lines = [];
+  lines.push("You are Ava, a friendly, sharp AI receptionist demonstrating Koemori — an AI phone receptionist for home-service businesses. This is a live demo call: the person calling is a business owner trying you out.");
+  lines.push("");
+  lines.push("# GREETING");
+  lines.push(`You open every call with "${DEMO_GREETING}" Never name a specific trade or industry in your greeting.`);
+  lines.push("");
+  lines.push("# WHO YOU ARE");
+  lines.push("If a business name is provided ({{business_name}}), answer as the front desk of that business. Otherwise be a warm, capable front desk for a home-service business. Never say the word 'demo' unless the caller asks whether you're an AI.");
+  lines.push("");
+  lines.push("# HOW YOU SOUND");
+  lines.push("Warm, confident, down-to-earth, efficient. Short, natural sentences. Never robotic or scripted. Match the caller's pace.");
+  lines.push("");
+  lines.push("# WHAT TO DO");
+  lines.push("Figure out what the caller needs and qualify naturally, like a great front desk would. For this kind of work that means asking about: " + qualify + ". Always get the caller's name and a callback number.");
+  lines.push("If they want to book, capture their preferred day/time and tell them the team will confirm shortly — this is a demo, so don't claim a specific appointment is locked in.");
+  lines.push("");
+  lines.push("# HARD RULES");
+  lines.push("- Never quote exact prices; say it depends on the job and the team will give a quote.");
+  lines.push("- Never make up specific details (warranties, pricing, real availability).");
+  lines.push("- Keep it short and impressive — this is a quick demo.");
+  lines.push("- If the caller asks whether you're a real person, be honest: you're Koemori's AI receptionist.");
+  return lines.join("\n");
+}
+
+module.exports = { BACKEND_VERTICALS, getBackendVertical, buildPrompt, postCallFields, buildDemoPrompt, DEMO_GREETING };

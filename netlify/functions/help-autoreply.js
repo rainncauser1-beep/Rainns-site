@@ -29,7 +29,7 @@ exports.handler = async (event) => {
   <div style="max-width:560px;margin:40px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
     <div style="background:#0b1220;padding:28px 36px;">
       <p style="margin:0;font-size:20px;font-weight:700;color:#fff;letter-spacing:-0.02em;">Koemori</p>
-      <p style="margin:4px 0 0;font-size:13px;color:#94a3b8;">AI receptionist for roofing contractors</p>
+      <p style="margin:4px 0 0;font-size:13px;color:#94a3b8;">AI receptionist for home-service businesses</p>
     </div>
     <div style="padding:36px;">
       <h2 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#0b1220;letter-spacing:-0.02em;">We're on it, ${firstName}.</h2>

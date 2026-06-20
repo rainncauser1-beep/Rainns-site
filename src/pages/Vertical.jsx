@@ -478,7 +478,7 @@ export default function Vertical() {
       </section>
 
       <ContactSection />
-      <CallDemoModal open={callOpen} onClose={() => setCallOpen(false)} tradeOptions={content.tradeOptions} />
+      <CallDemoModal open={callOpen} onClose={() => setCallOpen(false)} tradeOptions={content.tradeOptions} vertical={vertical.slug} />
     </div>
   );
 }
