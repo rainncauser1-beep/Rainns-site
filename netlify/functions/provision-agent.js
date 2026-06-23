@@ -15,6 +15,13 @@ const ADMIN_EMAIL = "rainn.causer1@gmail.com";
 
 const { getVerifiedUser } = require("./lib/auth");
 
+// The brain behind production booking agents: Claude 4.6 Sonnet — chosen for
+// reliable tool calls (availability checks + booking) over realtime models.
+// Defined once and applied to BOTH the create-retell-llm path AND the
+// re-provision update-retell-llm PATCH, so hitting "Re-provision" upgrades
+// existing clients (e.g. Driveway Detailers), not just newly-created agents.
+const AGENT_MODEL = { model: "claude-4.6-sonnet", model_temperature: 0.5 };
+
 // Best-effort: fetch a website and extract readable text for agent context.
 async function fetchWebsiteContext(url) {
   if (!url) return null;
@@ -200,6 +207,9 @@ exports.handler = async (event) => {
         headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           general_prompt: generalPrompt,
+          // Upgrade the existing LLM's brain too — a re-provision switches a
+          // legacy gpt-4o-mini client over to Claude 4.6 Sonnet, not just new ones.
+          ...AGENT_MODEL,
           begin_message: beginMessage,
           // Always send tools (empty array clears them if booking was turned off)
           general_tools: generalTools || [],
@@ -320,8 +330,7 @@ exports.handler = async (event) => {
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         general_prompt: generalPrompt,
-        model: "gpt-4o-mini",
-        model_temperature: 0.3,
+        ...AGENT_MODEL,
         begin_message: beginMessage,
         ...(generalTools ? { general_tools: generalTools } : {}),
       }),

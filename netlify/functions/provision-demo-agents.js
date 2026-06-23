@@ -14,6 +14,12 @@ const ADMIN_EMAIL = "rainn.causer1@gmail.com";
 
 const { getVerifiedUser } = require("./lib/auth");
 
+// Demo agents sound their best on GPT Realtime 2 (speech-to-speech) — far more
+// human than a text LLM + TTS. They have no booking tool, so realtime's weaker
+// tool-calling is irrelevant here (production booking agents stay on Claude 4.6
+// Sonnet — see provision-agent.js). s2s_model is mutually exclusive with `model`.
+const DEMO_S2S_MODEL = "gpt-realtime-2";
+
 async function retell(path, apiKey, method, payload) {
   const res = await fetch(`https://api.retellai.com${path}`, {
     method,
@@ -38,6 +44,10 @@ async function upsertDemoAgent({ apiKey, supabase, slug, existing }) {
       const upd = await retell(`/update-retell-llm/${llmId}`, apiKey, "PATCH", {
         general_prompt: prompt,
         begin_message: DEMO_GREETING,
+        // Upgrade any pre-existing (gpt-4o-mini) demo LLM to realtime. s2s_model
+        // and model are mutually exclusive, so clear model to switch engines.
+        s2s_model: DEMO_S2S_MODEL,
+        model: null,
       });
       if (!upd.ok) return { slug, action: "update", ok: false, error: `LLM ${upd.status}: ${upd.text.slice(0, 120)}` };
       await supabase.from("demo_agents").update({ llm_id: llmId, updated_at: new Date().toISOString() }).eq("vertical", slug);
@@ -49,8 +59,7 @@ async function upsertDemoAgent({ apiKey, supabase, slug, existing }) {
   // CREATE a fresh LLM + agent.
   const llmRes = await retell("/create-retell-llm", apiKey, "POST", {
     general_prompt: prompt,
-    model: "gpt-4o-mini",
-    model_temperature: 0.3,
+    s2s_model: DEMO_S2S_MODEL,
     begin_message: DEMO_GREETING,
   });
   if (!llmRes.ok) return { slug, action: "create", ok: false, error: `LLM ${llmRes.status}: ${llmRes.text.slice(0, 120)}` };
